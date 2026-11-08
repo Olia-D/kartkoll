@@ -468,7 +468,6 @@ const PLAN=[
 // ---------- helpers
 // Progress (stats, hist, marks, plan) is kept in the artifact's web database (doc progress/lev),
 // shared by everyone who can save on this page, with a copy in this browser as fallback.
-// "en" stays a per-device setting.
 const SYNC=["stats","hist","marks","plan"];
 const local={get(k,d){try{const v=localStorage.getItem("geo:"+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem("geo:"+k,JSON.stringify(v))}catch(e){}}};
 const mem={};SYNC.forEach(k=>mem[k]=local.get(k,undefined));
@@ -534,7 +533,7 @@ async function connectCloud(){
   },e=>{clearTimeout(giveUp);cloud.ref=null;setStatus(e&&e.code==="revoked"?"local":"error")});
 }
 function refreshView(){if(["home","topic","adult"].includes(state.screen))render()}
-const state={screen:"home",area:null,en:store.get("en",false),adultTab:"dash",confirmReset:false,quitSure:false};
+const state={screen:"home",area:null,adultTab:"dash",confirmReset:false,quitSure:false};
 const app=document.getElementById("app");
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -542,7 +541,6 @@ const tag=a=>{const x=AREAS[a];return `<span class="tag" style="background:var($
 const tv=a=>a&&AREAS[a]?`--tc:var(${AREAS[a].col});--tb:var(${AREAS[a].bg})`:`--tc:var(--water);--tb:var(--water-bg)`;
 const pct=(c,a)=>a?Math.round(c/a*100):null;
 const todayISO=()=>{const n=new Date();return n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0")+"-"+String(n.getDate()).padStart(2,"0")};
-const enBtn=()=>`<button class="pill" data-act="en" aria-pressed="${state.en}" title="Visa frågorna på engelska också">English</button>`;
 
 // ---------- progress
 const getStats=()=>store.get("stats",{});
@@ -611,7 +609,7 @@ function renderHome(){
     ${weak?`<button class="row-btn hard" data-act="weak:alla"><span class="ic">${ICON.hard}</span><span><b>Öva på det svåra</b><span class="small">${weak} ${weak===1?"fråga":"frågor"} du har missat</span></span><span class="go">›</span></button>`:""}
     <button class="row-btn" data-act="cards:alla"><span class="ic">${ICON.cards}</span><span><b>Begreppskort</b><span class="small">Lär dig orden, ${T.length} kort</span></span><span class="go">›</span></button>
   </div>
-  <div class="foot">${enBtn()}<button class="pill" data-act="adult">För vuxna ›</button></div>
+  <div class="foot"><span></span><button class="pill" data-act="adult">För vuxna ›</button></div>
   <p class="small" id="syncnote" role="status">${syncText()}</p>`;
 }
 
@@ -661,10 +659,6 @@ function renderQuiz(){
   <section class="qcard">
     <div class="qmeta">${tag(q[0])}${quiz.streak>=2?`<span class="streak">${quiz.streak} rätt i rad!</span>`:""}</div>
     <p class="q" id="qtext">${esc(q[1])}</p>
-    ${state.en?`<p class="en">${esc(q[4])}</p>`:""}
-    <div class="row" style="display:flex;gap:8px;flex-wrap:wrap">
-      ${enBtn()}
-    </div>
     <div class="opts">${opts.map((o,i)=>{
       let cls="",m="";
       if(ans){if(o===q[2]){cls="ok";m="✓"}else if(i===quiz.picked){cls="no";m="✗"}else cls="dim"}
@@ -732,11 +726,11 @@ function renderCards(){
   <div class="flipwrap" style="${tv(t[0])}">
     <button class="flip${cards.flip?" on":""}" id="card" data-act="flip" aria-label="${cards.flip?esc(t[2]):`${esc(t[1])}. Tryck för att vända kortet.`}">
       <span class="face front">${tag(t[0])}<span class="term">${esc(t[1])}</span><span class="hint">Vad betyder ordet? Säg det högt. Tryck sedan på kortet.</span></span>
-      <span class="face back-face"><span class="small" style="color:var(--ink)">${esc(t[1])}</span><span class="def">${esc(t[2])}</span>${state.en?`<span class="en">${esc(t[3])}</span>`:""}</span>
+      <span class="face back-face"><span class="small" style="color:var(--ink)">${esc(t[1])}</span><span class="def">${esc(t[2])}</span></span>
     </button>
   </div>
   <div id="cardBtns">${cardBtns()}</div>
-  <div class="foot" style="border:0;padding:0">${cards.i>0?`<button class="prev" data-act="prevcard">← Förra kortet</button>`:"<span></span>"}${enBtn()}</div>`;
+  <div class="foot" style="border:0;padding:0">${cards.i>0?`<button class="prev" data-act="prevcard">← Förra kortet</button>`:""}</div>`;
 }
 function cardBtns(){
   return cards.flip
@@ -847,7 +841,6 @@ function act(a){
     case "kan":case "mer":return markCard(cmd);
     case "prevcard":cards.i=Math.max(0,cards.i-1);cards.flip=false;return renderCards();
     case "cardsmore":return startCards(cards.area,shuffle(cards.more));
-    case "en":state.en=!state.en;store.set("en",state.en);return render();
     case "adult":state.screen="adult";state.confirmReset=false;render();return window.scrollTo(0,0);
     case "atab":state.adultTab=arg;state.confirmReset=false;return render();
     case "reveal":{const r=document.getElementById("r"+arg),b=app.querySelector(`[data-act="reveal:${arg}"]`);r.hidden=!r.hidden;b.textContent=r.hidden?"Visa svar":"Dölj svar";return}
