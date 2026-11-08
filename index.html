@@ -1,0 +1,878 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Kartkoll</title>
+<meta name="description" content="Kartkoll – träna inför geografiprovet: quiz, begreppskort och dagens uppdrag.">
+<meta name="theme-color" content="#2f7fc1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Kartkoll">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;-webkit-tap-highlight-color:transparent}img{max-width:100%}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: one thing per screen. Home = today's mission + four map-legend topic tiles. Every other screen has one big back button and one big next step. */
+:root{
+  --paper:#f3f7f4; --card:#ffffff; --ink:#1d2b2a; --muted:#566865; --line:#cfdcd7;
+  --water:#2f7fc1; --forest:#2f8a57; --field:#9a7000; --town:#d2452f;
+  --water-bg:#e3f0fa; --forest-bg:#e2f3e8; --field-bg:#fbf1d2; --town-bg:#fbe5e1;
+  --good:#2f8a57; --good-bg:#e2f3e8; --bad:#c23a2a; --bad-bg:#fbe5e1; --warn:#a36f00; --warn-bg:#fbf1d2;
+  --star:#f2b705; --accent:#2f7fc1; --onaccent:#ffffff;
+  --display:"Baloo 2", "Trebuchet MS", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#101816; --card:#18231f; --ink:#e6efec; --muted:#9cb0aa; --line:#2c3c37;
+  --water:#6aaee6; --forest:#5cc287; --field:#e8bf45; --town:#f07a64;
+  --water-bg:#15293a; --forest-bg:#16301f; --field-bg:#352c10; --town-bg:#3a1c17;
+  --good:#5cc287; --good-bg:#16301f; --bad:#f07a64; --bad-bg:#3a1c17; --warn:#e8bf45; --warn-bg:#352c10;
+  --star:#f5c842; --accent:#6aaee6; --onaccent:#0e1a26; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#101816; --card:#18231f; --ink:#e6efec; --muted:#9cb0aa; --line:#2c3c37;
+  --water:#6aaee6; --forest:#5cc287; --field:#e8bf45; --town:#f07a64;
+  --water-bg:#15293a; --forest-bg:#16301f; --field-bg:#352c10; --town-bg:#3a1c17;
+  --good:#5cc287; --good-bg:#16301f; --bad:#f07a64; --bad-bg:#3a1c17; --warn:#e8bf45; --warn-bg:#352c10;
+  --star:#f5c842; --accent:#6aaee6; --onaccent:#0e1a26; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:18px;line-height:1.5}
+button{font:inherit;color:inherit}
+button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--warn);outline-offset:3px}
+#app{max-width:680px;margin:0 auto;padding-block:16px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.1;text-wrap:balance}
+p{margin:0}
+.small{font-size:15px;color:var(--muted)}
+.eyebrow{font-size:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+
+/* buttons */
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:60px;padding:12px 20px;border-radius:16px;border:0;background:var(--accent);color:var(--onaccent);font:800 21px var(--display);cursor:pointer;box-shadow:0 4px 0 color-mix(in srgb,var(--accent) 60%,#000);transition:transform .08s}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 color-mix(in srgb,var(--accent) 60%,#000)}
+.btn.ghost{background:var(--card);color:var(--ink);border:2px solid var(--line);box-shadow:none}
+.btn.green{background:var(--good);color:var(--card);box-shadow:0 4px 0 color-mix(in srgb,var(--good) 60%,#000)}
+.btn.orange{background:var(--warn);color:var(--card);box-shadow:0 4px 0 color-mix(in srgb,var(--warn) 60%,#000)}
+.pill{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:8px 14px;border-radius:999px;border:2px solid var(--line);background:var(--card);font:700 16px var(--body);cursor:pointer}
+.pill[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.stack-btns{display:flex;flex-direction:column;gap:12px}
+
+/* top bar on inner screens */
+.topbar{display:flex;align-items:center;gap:12px}
+.back{display:inline-flex;align-items:center;gap:6px;min-height:48px;padding:8px 16px;border-radius:999px;border:2px solid var(--line);background:var(--card);font:800 18px var(--display);cursor:pointer;flex:none}
+.back.sure{border-color:var(--bad);color:var(--bad)}
+.prog{flex:1;min-width:0;display:flex;align-items:center;gap:10px;font:800 18px var(--display);font-variant-numeric:tabular-nums}
+.bar{flex:1;height:14px;background:var(--line);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .35s}
+
+/* home */
+.hello{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.hello h1{font-size:clamp(38px,9vw,52px);font-weight:800}
+.days{flex:none;text-align:center;background:var(--town);color:var(--card);border-radius:18px;padding:8px 14px;font-family:var(--display);line-height:1}
+.days b{display:block;font-size:40px}
+.days span{font-size:15px;font-weight:700}
+.mission{border-radius:22px;padding:20px;background:var(--cb);border:3px solid var(--c);display:flex;flex-direction:column;gap:10px}
+.mission .eyebrow{color:var(--c)}
+.mission h2{font-size:30px;font-weight:800}
+.mission .done{display:flex;align-items:center;gap:10px;font:800 20px var(--display);color:var(--good)}
+.mission .done svg{width:30px;height:30px}
+.score{display:flex;flex-direction:column;gap:8px}
+.score .line{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-family:var(--display);font-weight:800;font-size:20px}
+.score .line b{font-size:26px;font-variant-numeric:tabular-nums}
+.score .bar{height:18px}
+.score .bar i{background:var(--good)}
+.sec{font-size:24px;font-weight:800}
+.topics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.topic{display:flex;flex-direction:column;align-items:flex-start;gap:8px;text-align:left;padding:16px;border-radius:20px;border:2px solid transparent;background:var(--tb);cursor:pointer;min-width:0;transition:transform .1s}
+.topic:hover{border-color:var(--tc)}
+.topic:active{transform:scale(.98)}
+.topic .ic{width:44px;height:44px;border-radius:12px;background:var(--tc);color:var(--card);display:grid;place-items:center}
+.topic .ic svg{width:28px;height:28px}
+.topic b{font:800 20px/1.15 var(--display);color:var(--ink)}
+.topic .small{color:var(--ink);opacity:.8}
+.topic .bar{width:100%;height:10px;background:color-mix(in srgb,var(--tc) 22%,var(--card))}
+.topic .bar i{background:var(--tc)}
+.extra{display:grid;gap:10px}
+.row-btn{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:14px 16px;min-height:68px;border-radius:18px;border:2px solid var(--line);background:var(--card);cursor:pointer}
+.row-btn:hover{border-color:var(--accent)}
+.row-btn .ic{flex:none;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--water-bg);color:var(--water)}
+.row-btn .ic svg{width:24px;height:24px}
+.row-btn.hard .ic{background:var(--warn-bg);color:var(--warn)}
+.row-btn b{display:block;font:800 19px/1.2 var(--display)}
+.row-btn span.small{display:block}
+.row-btn .go{margin-left:auto;font:800 24px var(--display);color:var(--muted)}
+.foot{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;border-top:2px dashed var(--line);padding-top:16px}
+
+/* topic screen */
+.topic-hero{border-radius:22px;padding:22px;background:var(--tb);display:flex;flex-direction:column;gap:12px}
+.topic-hero .ic{width:56px;height:56px;border-radius:16px;background:var(--tc);color:var(--card);display:grid;place-items:center}
+.topic-hero .ic svg{width:34px;height:34px}
+.topic-hero h1{font-size:34px;font-weight:800}
+.topic-hero .bar{height:14px;background:color-mix(in srgb,var(--tc) 22%,var(--card))}
+.topic-hero .bar i{background:var(--tc)}
+
+/* quiz */
+.qcard{background:var(--card);border:2px solid var(--line);border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:16px}
+.qmeta{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.tag{font-weight:700;padding:3px 10px;border-radius:8px;font-size:14px;display:inline-block}
+.streak{font:800 16px var(--display);color:var(--town)}
+.q{font-family:var(--display);font-size:clamp(24px,5.4vw,30px);font-weight:700;line-height:1.25;text-wrap:balance}
+.en{color:var(--muted);font-size:16px;font-style:italic}
+.opts{display:grid;gap:10px}
+.opt{display:flex;align-items:center;gap:14px;width:100%;text-align:left;min-height:64px;padding:12px 14px;border-radius:16px;border:3px solid var(--line);background:var(--paper);font:18px/1.3 var(--body);cursor:pointer;transition:transform .08s,border-color .15s}
+.opt:hover:not(:disabled){border-color:var(--accent)}
+.opt:active:not(:disabled){transform:scale(.99)}
+.opt:disabled{cursor:default}
+.opt .k{flex:none;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:var(--card);border:2px solid var(--line);font:800 18px var(--display)}
+.opt .t{flex:1;min-width:0}
+.opt .m{flex:none;font:800 26px var(--display);width:28px;text-align:center}
+.opt.ok{border-color:var(--good);background:var(--good-bg)}
+.opt.ok .k{background:var(--good);border-color:var(--good);color:var(--card)}
+.opt.ok .m{color:var(--good)}
+.opt.no{border-color:var(--bad);background:var(--bad-bg)}
+.opt.no .k{background:var(--bad);border-color:var(--bad);color:var(--card)}
+.opt.no .m{color:var(--bad)}
+.opt.dim{opacity:.5}
+.fb{border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;animation:pop .25s ease-out}
+.fb.good{background:var(--good-bg);border:2px solid var(--good)}
+.fb.bad{background:var(--bad-bg);border:2px solid var(--bad)}
+.fb .h{font:800 24px var(--display)}
+.fb.good .h{color:var(--good)}
+.fb.bad .h{color:var(--bad)}
+@keyframes pop{from{transform:scale(.96);opacity:.4}to{transform:none;opacity:1}}
+.keys{text-align:center}
+
+/* results */
+.result{position:relative;overflow:hidden;background:var(--card);border:2px solid var(--line);border-radius:22px;padding:28px 20px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px}
+.stars{display:flex;gap:6px}
+.stars svg{width:58px;height:58px;fill:var(--line)}
+.stars svg.on{fill:var(--star);animation:star .4s ease-out backwards}
+.stars svg.on:nth-child(2){animation-delay:.15s}.stars svg.on:nth-child(3){animation-delay:.3s}
+@keyframes star{from{transform:scale(0) rotate(-40deg)}to{transform:none}}
+.result .big{font:800 46px/1 var(--display);font-variant-numeric:tabular-nums}
+.result .msg{font:700 21px/1.3 var(--display);max-width:30ch;text-wrap:balance}
+.result .stack-btns{width:100%;margin-top:6px}
+.confetti i{position:absolute;top:-12px;width:10px;height:14px;border-radius:2px;animation:fall 1.8s ease-in forwards;opacity:.9}
+@keyframes fall{to{transform:translateY(520px) rotate(540deg);opacity:0}}
+.remember{display:flex;flex-direction:column;gap:10px}
+.remember ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.remember li{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.remember li .a{border-left:5px solid var(--good);padding-left:10px;font-weight:700}
+
+/* flashcards */
+.flipwrap{perspective:1200px}
+.flip{position:relative;display:block;width:100%;min-height:280px;border:0;padding:0;background:none;cursor:pointer;transform-style:preserve-3d;transition:transform .5s}
+.flip.on{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;border-radius:22px;padding:24px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:12px;text-align:center;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.front{background:var(--card);border:3px solid var(--line)}
+.back-face{background:var(--tb);border:3px solid var(--tc);transform:rotateY(180deg)}
+.term{font:800 clamp(34px,8vw,46px)/1.05 var(--display);overflow-wrap:anywhere}
+.def{font-size:22px;line-height:1.4;max-width:30ch}
+.hint{color:var(--muted);font-size:16px;max-width:28ch}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.prev{align-self:center;background:none;border:0;color:var(--muted);font:700 16px var(--body);text-decoration:underline;cursor:pointer;min-height:44px}
+
+/* adults */
+.tabs{display:flex;flex-wrap:wrap;gap:8px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.panel h2{font-size:22px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.tile{border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--paper);display:flex;flex-direction:column;gap:2px;min-width:0}
+.tile .n{font:800 36px/1 var(--display)}
+.tile span{font-size:14px;color:var(--muted)}
+.stackbar{display:flex;height:16px;border-radius:99px;overflow:hidden;background:var(--line)}
+.stackbar i{display:block;height:100%}
+.s-mastered{background:var(--good)}.s-learning{background:var(--water)}.s-weak{background:var(--bad)}.s-new{background:var(--line)}
+.legendkey{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:14px;color:var(--muted)}
+.legendkey span{display:inline-flex;align-items:center;gap:6px}
+.legendkey i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.arow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+.arow:first-child{border-top:0}
+.arow .stackbar{grid-column:1/-1}
+.arow b{font-family:var(--display);font-size:18px}
+.list{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.list li{border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;background:var(--paper);min-width:0}
+.list li .a{border-left:4px solid var(--forest);padding-left:10px}
+.plan li{flex-direction:row;align-items:flex-start;gap:12px}
+.plan li.past{opacity:.55}
+.plan li.now{border-color:var(--accent);border-width:2px}
+.plan input{width:22px;height:22px;margin-top:3px;flex:none;accent-color:var(--forest)}
+.plan .d{font-family:var(--display);font-weight:700;min-width:84px}
+.trend{display:flex;align-items:flex-end;gap:8px;height:140px;border-bottom:2px solid var(--line)}
+.trend .col{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px}
+.trend .col i{display:block;width:100%;max-width:46px;background:var(--accent);border-radius:6px 6px 0 0}
+.trend .col b{font-size:12px}
+.xl{display:flex;gap:8px}
+.xl span{flex:1;min-width:0;text-align:center;font-size:12px;color:var(--muted)}
+.empty{border:2px dashed var(--line);border-radius:12px;padding:16px;color:var(--muted)}
+.warntxt{color:var(--warn);font-weight:700}
+@media (max-width:380px){.topics{grid-template-columns:1fr}.two{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}.confetti{display:none}}
+</style>
+</head>
+<body>
+
+<main id="app" aria-live="polite"></main>
+
+<script>
+const ICON={
+  delar:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M3 6.5l6-2.5 6 2.5 6-2.5v13.5l-6 2.5-6-2.5-6 2.5z"/><path d="M9 4v13.5M15 6.5V20"/></svg>',
+  kartan:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z" fill="currentColor"/></svg>',
+  natur:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M2 20l7-12 4 6 3-4 6 10z"/><path d="M7.3 11l1.7 1.5 1.5-1.5"/></svg>',
+  klimat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.5" r="3.2"/><path d="M9 2v1.4M2.5 8.5h1.4M4.4 3.9l1 1M13.6 3.9l-1 1"/><path d="M8.5 20h9a3.5 3.5 0 0 0 .3-7 5 5 0 0 0-9.6 1.6A2.8 2.8 0 0 0 8.5 20z"/></svg>',
+  mix:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h3.5c4 0 6 10 10 10H21M3 17h3.5c1.6 0 2.8-1.6 3.9-3.5M13.6 9.5C14.7 8 15.6 7 17 7H21M18 4l3 3-3 3M18 14l3 3-3 3"/></svg>',
+  hard:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>',
+  cards:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="7" y="3" width="13" height="16" rx="2.5"/><path d="M4 7v11a3 3 0 0 0 3 3h9"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" stroke-width="2"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>',
+  star:'<svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z"/></svg>'
+};
+const AREAS={
+  delar:{name:"Sveriges delar",pages:"s. 6–11",col:"--water",bg:"--water-bg"},
+  kartan:{name:"Kartan",pages:"s. 12–17",col:"--town",bg:"--town-bg"},
+  natur:{name:"Naturlandskapet",pages:"s. 18–21",col:"--forest",bg:"--forest-bg"},
+  klimat:{name:"Årstider, väder & klimat",pages:"s. 22–27",col:"--field",bg:"--field-bg"}
+};
+// [area, question, correct answer, [3 wrong answers], English gloss, textbook page]
+const Q=[
+// ---- Sveriges delar
+["delar","Hur många landskap har Sverige?","25",["15","21","30"],"How many provinces (landskap) does Sweden have?","s. 6"],
+["delar","Vad heter Sveriges tre landsdelar?","Götaland, Svealand och Norrland",["Skåne, Småland och Gotland","Norrland, Lappland och Jämtland","Svealand, Dalarna och Värmland"],"What are Sweden's three regions (landsdelar)?","s. 6"],
+["delar","Vilket av dessa är ett landskap?","Dalarna",["Svealand","Götaland","Norrland"],"Which of these is a province (landskap)?","s. 6"],
+["delar","Vilket av dessa är en landsdel?","Norrland",["Lappland","Dalarna","Skåne"],"Which of these is one of the three big regions?","s. 6"],
+["delar","Vilken landsdel ligger längst i söder?","Götaland",["Svealand","Norrland","Lappland"],"Which region lies furthest south?","s. 6"],
+["delar","Vilket landskap ligger längst i söder i Sverige?","Skåne",["Blekinge","Halland","Gotland"],"Which province lies furthest south?","s. 6"],
+["delar","Vad är en dialekt?","Olika sätt att tala samma språk",["Ett eget språk som bara finns i Norrland","Ett annat ord för landskap","Ett sätt att skriva på en karta"],"What is a dialect?","s. 6"],
+["delar","Var finns gränserna mellan landskapen?","Bara ritade på kartor",["Som låga stängsel i naturen","Som breda vägar mellan landskapen","Som tydliga linjer i skogen"],"Where are the borders between provinces?","s. 6"],
+["delar","Ungefär hur många människor bor i Sverige?","Tio miljoner",["En miljon","Hundra miljoner","En halv miljon"],"About how many people live in Sweden?","s. 8"],
+["delar","Ungefär hur många av Sveriges invånare är födda i ett annat land eller har föräldrar som flyttat hit?","En miljon",["Tio tusen","Hundra tusen","Fem miljoner"],"About how many were born abroad or have parents who moved here?","s. 8"],
+["delar","Vad är en tätort?","En plats där minst 200 personer bor och husen ligger ganska tätt",["En plats där få människor bor långt ifrån varandra", "En plats i skogen med några enstaka hus och gårdar", "En stor sjö med många öar och holmar i skärgården"],"What is a tätort (built-up area)?","s. 8"],
+["delar","Vad kallas ett område där det inte bor så många människor?","Glesbygd",["Tätort","Storstad","Landsdel"],"What is an area with few people called?","s. 8"],
+["delar","Var bor de flesta människor i Sverige?","I städer och orter i södra och mellersta Sverige",["I vildmarken och byarna i norra Sverige", "Ute på öarna i skärgården och på Gotland", "I små byar uppe i fjällen i Lappland"],"Where do most people in Sweden live?","s. 8"],
+["delar","Hur ligger Sverige i förhållande till Nordpolen?","Ganska nära Nordpolen",["Precis vid Nordpolen","Mitt emellan Nordpolen och Sydpolen","Närmare Sydpolen än Nordpolen"],"Where is Sweden relative to the North Pole?","s. 10"],
+["delar","Vad är Golfströmmen?","En varm havsström som värmer Sveriges och Norges kuster",["En kall havsström som kommer ner från Nordpolen", "En stor flod som rinner genom hela Sverige", "En stark vind som blåser upp från Medelhavet"],"What is the Gulf Stream?","s. 10"],
+["delar","Vad hade hänt utan Golfströmmen?","Det hade varit mycket kallare i Sverige",["Det hade varit mycket varmare i Sverige","Det hade regnat varje dag i Sverige","Det hade inte funnits några årstider"],"What would happen without the Gulf Stream?","s. 10"],
+["delar","Vilka länder kallas de nordiska länderna?","Sverige, Norge, Finland, Danmark och Island",["Sverige, Norge, Finland, Danmark och Estland","Sverige, Norge, Tyskland, Danmark och Island","Sverige, Finland, Polen, Danmark och Island"],"Which are the Nordic countries?","s. 10"],
+["delar","Vilka två länder har Sverige landgräns mot?","Norge och Finland",["Danmark och Norge","Finland och Estland","Danmark och Tyskland"],"Which two countries share a land border with Sweden?","s. 10"],
+["delar","Hur kan man åka bil från Sverige till Danmark?","Över Öresundsbron",["Genom en tunnel under Norge","Över Ölandsbron","Via Finland och Tyskland"],"How can you drive from Sweden to Denmark?","s. 10"],
+["delar","Hur kan man ta sig till Island?","Man kan flyga eller åka båt",["Man kan köra bil över en bro","Man kan gå över gränsen","Man kan åka tåg genom Norge"],"How can you get to Iceland?","s. 10"],
+["delar","Vilka länder kallas de baltiska länderna?","Estland, Lettland och Litauen",["Danmark, Tyskland och Polen","Norge, Finland och Island","Ryssland, Polen och Finland"],"Which are the Baltic countries?","s. 10"],
+["delar","Vilket hav ligger mellan Sverige och de baltiska länderna?","Östersjön",["Atlanten","Medelhavet","Nordsjön"],"Which sea lies between Sweden and the Baltic countries?","s. 10"],
+["delar","Vad är en världsdel?","Ett av jordens sju stora landområden",["En av Sveriges tre landsdelar","Ett av jordens stora hav","Ett land i Europa"],"What is a continent (världsdel)?","s. 10"],
+["delar","Hur många världsdelar finns det?","Sju",["Fem","Tre","Tio"],"How many continents are there?","s. 11"],
+["delar","Vilka av dessa är världsdelar?","Europa, Asien, Afrika och Oceanien",["Europa, Norden, Asien och Afrika","Sverige, Europa, Asien och Afrika","Norden, Baltikum, Asien och Oceanien"],"Which of these are continents?","s. 11"],
+["delar","I vilken världsdel ligger Sverige?","Europa",["Norden","Asien","Nordamerika"],"Which continent is Sweden in?","s. 11"],
+["delar","Hur stort är Sverige jämfört med andra länder i Europa?","Ett av de största länderna",["Ett av de minsta länderna","Det allra största landet","Lika stort som Island"],"How big is Sweden compared with other European countries?","s. 11"],
+["delar","Vad är EU?","Ett samarbete där länder i Europa bestämmer lagar och regler tillsammans",["En världsdel som består av många olika länder i Europa", "Ett landskap i södra Sverige med många orter och städer", "Ett annat ord för alla de nordiska länderna tillsammans"],"What is the EU?","s. 11"],
+["delar","Vad står förkortningen EU för?","Europeiska unionen",["Europas utbildning","Eurasiska unionen","Europeiska ungdomen"],"What does EU stand for?","s. 11"],
+
+// ---- Kartan
+["kartan","Vilka är de fyra väderstrecken?","Norr, söder, öster och väster",["Vår, sommar, höst och vinter","Norr, söder, höger och vänster","Nordpolen, Sydpolen, ekvatorn och gradnätet"],"What are the four compass directions?","s. 12"],
+["kartan","Du går mot norr. Vilket väderstreck har du till höger?","Öster",["Väster","Söder","Norr"],"Walking north, what is on your right?","s. 12"],
+["kartan","Du vänder dig helt om och går mot Sydpolen. Åt vilket håll går du?","Söder",["Norr","Öster","Väster"],"You turn around and walk toward the South Pole. Which direction?","s. 12"],
+["kartan","Vad kallas jordens nordligaste och sydligaste punkter?","Nordpolen och Sydpolen",["Ekvatorn och gradnätet","Norra och södra halvklotet","Norden och Södern"],"What are the northernmost and southernmost points of Earth called?","s. 12"],
+["kartan","Vad är en jordglob?","En liten modell av jordklotet",["En stor karta över Europa","En sorts kompass","Ett foto taget av en satellit"],"What is a globe?","s. 12"],
+["kartan","Vad kallas linjen mitt på jordklotet som delar det i norra och södra halvklotet?","Ekvatorn",["Gradnätet","Polcirkeln","Skalstocken"],"What is the line around the middle of the Earth called?","s. 12"],
+["kartan","Vad bildar längdgrader och breddgrader tillsammans?","Ett gradnät",["En teckenförklaring","Ett register","En skalstock"],"Longitude and latitude lines together form a…?","s. 12"],
+["kartan","Vad kan man använda gradnätet till?","Att beskriva exakt var en plats ligger på jorden",["Att mäta hur kallt eller varmt det är på platsen", "Att se vilken färg havet och skogen har på kartan", "Att hitta rätt sida i kartbokens register"],"What is the grid used for?","s. 12"],
+["kartan","Åt vilket håll pekar kompassnålen alltid?","Mot norr",["Mot söder","Mot solen","Dit man ska gå"],"Which way does a compass needle always point?","s. 13"],
+["kartan","Vad kan man använda en kompass till?","Att veta åt vilket håll man går, till exempel i skogen",["Att mäta hur långt det är mellan två orter på kartan", "Att se hur många människor som bor på platsen", "Att läsa av hur varmt eller kallt det är ute"],"What is a compass used for?","s. 13"],
+["kartan","Vad är GPS?","Ett system som med hjälp av satelliter räknar ut var man befinner sig",["En sorts kompass med en röd nål som pekar norrut", "En karta som visar alla linjer i tunnelbanan", "En lista i bokstavsordning över platser i kartboken"],"What is GPS?","s. 13"],
+["kartan","Vilken karta passar bäst när man orienterar i skogen?","Orienteringskarta",["Sjökort","T-banekarta","Vägatlas"],"Which map suits orienteering in the forest?","s. 13"],
+["kartan","Vilken karta använder man när man åker båt?","Sjökort",["Orienteringskarta","T-banekarta","Vägatlas"],"Which map do you use on a boat?","s. 13"],
+["kartan","Vilken karta hjälper dig att hitta rätt linje i tunnelbanan?","T-banekarta",["Sjökort","Orienteringskarta","Vägatlas"],"Which map helps you find the right metro line?","s. 13"],
+["kartan","Vad är en karta?","En förminskad bild av en plats",["En förstorad bild av en plats","En lista över alla städer","Ett foto av en person"],"What is a map?","s. 14"],
+["kartan","Vad kan en karta hjälpa oss med?","Att hitta rätt och att lära oss om platser vi aldrig varit på",["Att räkna ut vilket väder det blir imorgon på platsen", "Att ta reda på hur gammal en plats är och vem som byggt den", "Att se vad människor som bor där tycker om platsen"],"What can a map help us with?","s. 14"],
+["kartan","Vad är ett annat ord för kartbok?","Atlas",["Register","Glob","Kompass"],"Another word for a book of maps?","s. 14"],
+["kartan","Hur kan man göra en karta över en del av en stad?","Man utgår från ett flygfoto taget från ett flygplan",["Man ritar av en jordglob och gör den platt", "Man frågar alla som bor där hur det ser ut", "Man går runt med en kompass i en hel vecka"],"How can you make a map of part of a city?","s. 14"],
+["kartan","Vad används fotografier tagna av satelliter till?","Att göra världskartor",["Att mäta temperaturen","Att hitta rätt i skogen","Att göra register till kartböcker"],"What are satellite photos used for?","s. 14"],
+["kartan","Vad betyder blå färg på en vanlig karta?","Vatten",["Skog","Odlad mark","Städer"],"What does blue mean on a map?","s. 15"],
+["kartan","Vad betyder grön färg på kartan över Småland?","Skog",["Vatten","Odlad mark","Berg"],"What does green mean on the Småland map?","s. 15"],
+["kartan","Vad betyder gul färg på kartan över Småland?","Odlad mark",["Skog","Vatten","Städer"],"What does yellow mean on the Småland map?","s. 15"],
+["kartan","Vad betyder de röda markeringarna på kartan?","Städer och orter",["Skog","Sjöar","Gränsen mellan landskap"],"What do the red marks on the map mean?","s. 15"],
+["kartan","Vad är karttecken?","Symboler som visar saker på kartan",["Färger som visar var det finns vatten","Siffror i kartbokens register","Pilar som visar åt vilket håll norr är"],"What are map symbols?","s. 15"],
+["kartan","Vad är en teckenförklaring?","Den visar vad kartans tecken och färger betyder",["Den visar hur långt det är mellan platser","Den visar åt vilket håll norr är","Den visar var på sidan en plats finns"],"What is a map legend?","s. 15"],
+["kartan","Vad visar skalan på en karta?","Hur mycket kartan är förminskad",["Hur högt ett berg är","Hur många som bor på platsen","Åt vilket håll norr är"],"What does the scale show?","PDF"],
+["kartan","Vad använder man en skalstock till?","Att mäta avstånd på kartan",["Att hitta norr","Att läsa av höjden över havet","Att slå upp en ort i registret"],"What is a scale bar used for?","s. 15"],
+["kartan","Vad visar pilen med ordet Norr på en karta?","Åt vilket håll norr är",["Vart man ska gå","Att det är kallt där","Var staden ligger"],"What does the arrow marked Norr show?","s. 15"],
+["kartan","Vad visar den lila linjen på kartan över Småland?","Landskapsgräns",["Järnväg","Riksgräns","Europaväg"],"What does the purple line on the Småland map show?","s. 15"],
+["kartan","Vad kallas en stor väg som E4 på kartan?","Europaväg",["Järnväg","Landskapsgräns","Skalstock"],"What is a big road like E4 called on the map?","s. 15"],
+["kartan","Hur många invånare har en stor stad eller ort på kartan över Småland?","Mer än 50 000",["2 000–10 000","10 000–50 000","Färre än 2 000"],"How many people live in a large town on the Småland map?","s. 15"],
+["kartan","Vad är ett register i en kartbok?","En lista i bokstavsordning som visar var platser finns",["En karta över hela världen med alla länder", "En lista över kartans färger och vad de betyder", "Ett verktyg som man mäter avstånd på kartan med"],"What is the index (register) in an atlas?","s. 17"],
+["kartan","Var hittar man registret i en kartbok?","Längst bak",["Längst fram","På varje sida","Mitt i boken"],"Where in an atlas is the index?","s. 17"],
+["kartan","Vad betyder alfabetisk ordning?","Ordnade från A till Ö",["Ordnade efter storlek","Ordnade efter hur många som bor där","Ordnade från norr till söder"],"What does alphabetical order mean?","s. 17"],
+["kartan","I registret står ”Falkenberg 13 B 3”. Vad betyder 13?","Sidan i kartboken",["Rutan på kartan","Antal invånare","Avståndet i mil"],"In ‘Falkenberg 13 B 3’, what is 13?","s. 17"],
+["kartan","I registret står ”Falkenberg 13 B 3”. Vad betyder B 3?","Rutan på kartsidan",["Sidan i kartboken","Skalan på kartan","Riktningen på kompassen"],"What is B 3?","s. 17"],
+["kartan","Hur hittar du ruta B 3 på kartsidan?","Sätt ett finger på B överst och ett på 3 i kanten och följ dem tills de möts",["Börja längst ner på sidan och räkna tre rutor uppåt från kanten", "Leta upp Falkenberg i teckenförklaringen och följ pilen", "Mät avståndet från sidans hörn med skalstocken och en linjal"],"How do you find square B 3?","s. 17"],
+
+// ---- Naturlandskapet
+["natur","Vad är ett naturlandskap?","Berg, sjöar, skogar och annan natur",["Städer, vägar och hus","Ett landskap som människor har byggt","Bara hav och stränder"],"What is a natural landscape?","s. 18"],
+["natur","Vilka krafter i naturen förändrar landskapet?","Vind, vatten och is",["Bara människor och maskiner","Månen och stjärnorna","Värme från vulkaner"],"Which natural forces change the landscape?","s. 18"],
+["natur","Hur kan människor förändra landskapet?","Genom att bygga vägar och städer",["Genom att flytta på molnen","Genom att ändra på årstiderna","Genom att få isen att växa"],"How do people change the landscape?","s. 18"],
+["natur","Hur förändrar vinden landskapet?","Den flyttar sand och jord, särskilt vid stränder",["Den bygger nya höga berg av sand och snö", "Den fyller alla sjöar med is även på sommaren", "Den gör att marken höjer sig långsamt vid kusten"],"How does wind change the landscape?","s. 18"],
+["natur","Hur förändrar vatten som rinner genom landskapet marken?","Det flyttar jord, grus och stenar till nya platser",["Det gör att nya berg växer upp ur marken", "Det fryser till tjock inlandsis i dalarna", "Det trycker ner marken så att den sjunker"],"How does running water change the land?","s. 18"],
+["natur","Vad gör havets vågor med stora klippor?","De bryter sönder dem till stenar och slipar stenarna till sand",["De gör klipporna högre och starkare med tiden", "De täcker klipporna med ett tjockt lager av is", "De flyttar hela klipporna längre upp på land"],"What do waves do to big cliffs?","s. 18"],
+["natur","Vad händer när vatten fryser i sprickor i berget?","Isen tar större plats och spräcker berget",["Berget blir tätare och starkare av kylan", "Vattnet blir salt och rinner bort", "Berget sjunker långsamt ner i marken"],"What happens when water freezes in cracks in rock?","s. 18"],
+["natur","Vad kallas det när vind, vatten och is förändrar landskapet och flyttar jord och sand?","Erosion",["Vittring","Landhöjning","Nederbörd"],"What is it called when wind, water and ice move soil and sand?","s. 18"],
+["natur","Vad kallas det när berg bryts sönder, till exempel av frost?","Vittring",["Erosion","Istid","Klimat"],"What is it called when rock breaks apart, e.g. from frost?","s. 18"],
+["natur","Vad är en istid?","En lång period i jordens historia med mycket stora isområden",["En mycket kall vinter som varar i ett helt år", "En period då alla sjöar och floder fryser till is", "En månad med snö och minusgrader i hela Sverige"],"What is an ice age?","s. 19"],
+["natur","Vad är en inlandsis?","Ett stort och tjockt täcke av is över land",["Ett stort isberg som flyter omkring i havet", "Is som bildas på en sjö under vintern", "Snö som ligger kvar på ett högt berg hela året"],"What is an ice sheet (inlandsis)?","s. 19"],
+["natur","För ungefär hur länge sedan var isen som störst över Sverige?","För ungefär 25 000 år sedan",["För ungefär 250 år sedan","För ungefär 2 500 år sedan","För ungefär 250 000 år sedan"],"When was the ice at its biggest over Sweden?","s. 19"],
+["natur","Hur tjock var isen på en del ställen?","Tre kilometer",["Tre meter","Trettio meter","Trettio kilometer"],"How thick was the ice in places?","s. 19"],
+["natur","Vad hände med marken under den tunga isen?","Den trycktes ner",["Den lyftes upp","Den blev varmare","Den blev till vatten"],"What happened to the ground under the heavy ice?","s. 19"],
+["natur","För ungefär hur länge sedan började isen smälta?","För ungefär 18 000 år sedan",["För ungefär 180 år sedan","För ungefär 1 800 år sedan","För ungefär 180 000 år sedan"],"When did the ice start to melt?","s. 20"],
+["natur","Vad bildades när isen smälte?","Stora sjöar av smältvatten",["Nya höga berg av is och snö", "Stora varma öknar i norr", "Vulkaner som sprutar lava"],"What formed when the ice melted?","s. 20"],
+["natur","Vad hände med höga spetsiga berg när isen gled över dem?","De slipades runda",["De växte sig högre","De sprack i bitar av frost","De sjönk ner i havet"],"What happened to tall pointy mountains under the ice?","s. 20"],
+["natur","Varför blir det istid, tror forskarna?","Jordens bana runt solen eller jordaxelns lutning ändras",["Solen slocknar eller blir svagare under en tid", "Det regnar så mycket att allt vatten fryser till is", "Havet blir saltare och fryser till is i Norden"],"Why do ice ages happen, researchers think?","s. 20"],
+["natur","Vad kom först till Sverige efter att isen smält?","Växter",["Djur","Människor","Fiskar"],"What arrived first after the ice melted?","s. 20"],
+["natur","Vad är landhöjning?","Att marken långsamt höjer sig efter att den tunga isen försvunnit",["Att havets vatten stiger så att kusten drar sig inåt landet", "Att berg växer och blir högre när vinden blåser på dem", "Att isen blir tjockare och trycker ner marken ännu mer"],"What is land uplift?","s. 19"],
+["natur","Hur mycket höjer sig kusten i norra Sverige?","Nästan en centimeter varje år",["Nästan en meter varje år","Flera meter varje dag","Ingenting alls"],"How fast does the northern coast rise?","s. 19"],
+["natur","Hur mycket höjer sig marken i norr på hundra år?","Nästan en meter",["Nästan en kilometer","Bara några millimeter","Tio meter"],"How much does the land rise in 100 years?","s. 19"],
+["natur","Varför har mark som en gång låg under vatten blivit land?","Landhöjningen lyfte upp den",["Havet har blivit saltare","Isen har fryst vattnet","Människor har fyllt igen havet"],"Why did seabed become land?","s. 19"],
+["natur","Vad är isräfflor?","Repor i berghällar som stenar i isen skrapat",["Sprickor i berget som frost har gjort", "Spår efter djur som gått i snön", "Vågor som bildas i sanden vid stranden"],"What are glacial striations (isräfflor)?","s. 21"],
+["natur","Vad är en rullstensås?","En lång ås av grus och sand som smältvattnet lämnat efter sig",["Ett högt berg av hård granit i fjällen", "En stor sten som flyttats långt av inlandsisen", "En gammal havsbotten av lera som är bra att odla i"],"What is an esker (rullstensås)?","s. 21"],
+["natur","Vad är ett flyttblock?","En stor sten som flyttats av inlandsisen",["En sten som människor har flyttat","Ett block av is som smälter på våren","En sten som rullat ner från ett berg"],"What is an erratic boulder?","s. 21"],
+["natur","Vad är lerjord?","Gammal havsbotten som är bra att odla i",["Sand som vinden har flyttat från stränderna", "Grus som en rullstensås har lämnat efter sig", "Berg som frost har spräckt i många bitar"],"What is clay soil (lerjord)?","s. 21"],
+["natur","Vilket av dessa är ett spår efter inlandsisen som vi kan se idag?","Flyttblock",["Vulkaner","Korallrev","Sanddyner"],"Which is a trace of the ice sheet we can still see?","s. 21"],
+
+// ---- Årstider, väder och klimat (inkl. vatten)
+["klimat","Vilka är de fyra årstiderna i Sverige?","Vinter, vår, sommar och höst",["Januari, april, juli och oktober","Regn, snö, sol och vind","Norr, söder, öster och väster"],"What are the four seasons?","s. 22"],
+["klimat","Varför har vi årstider?","Jorden snurrar runt solen och jordklotet lutar",["Jorden är närmare solen på sommaren och längre bort på vintern","Solen flyttar sig mot norr och söder","Månen snurrar runt jorden"],"Why do we have seasons?","s. 22"],
+["klimat","Hur lång tid tar ett varv runt solen?","Ett år",["En månad","En dag","Tio år"],"How long is one trip around the sun?","s. 22"],
+["klimat","Varför är det sommar i Sverige i juni?","Norra halvklotet lutar in mot solen",["Norra halvklotet lutar bort från solen","Jorden är närmast månen","Det är fler moln på sommaren"],"Why is it summer in June?","s. 22"],
+["klimat","Varför är det vinter i Sverige i december?","Norra halvklotet lutar bort från solen",["Norra halvklotet lutar in mot solen","Solen slocknar tillfälligt","Jorden står stilla"],"Why is it winter in December?","s. 22"],
+["klimat","Vad är norra halvklotet?","Den del av jordklotet som ligger norr om ekvatorn",["Den del av jordklotet som ligger söder om ekvatorn", "Området som ligger närmast runt Nordpolen", "Sverige tillsammans med alla våra grannländer"],"What is the northern hemisphere?","s. 22"],
+["klimat","Vad kännetecknar vintern i Sverige?","Korta dagar, kallt och mörkt",["Långa dagar, varmt och ljust","Långa dagar, kallt och ljust","Korta dagar, varmt och mörkt"],"What characterises winter in Sweden?","s. 22"],
+["klimat","Vad är väder?","Hur det är ute under en kort tid",["Hur det brukar vara under många år","Hur varmt det är på sommaren","Hur mycket det regnar på ett år"],"What is weather?","PDF"],
+["klimat","Vad är klimat?","Hur vädret brukar vara på en plats under lång tid",["Hur det är ute just nu och en stund framåt", "Hur hårt det blåser och regnar idag", "Vilket väder det blir imorgon och i övermorgon"],"What is climate?","s. 23"],
+["klimat","”Idag är det soligt och 7 grader.” Är det väder eller klimat?","Väder",["Klimat","Nederbörd","Årstid"],"‘Sunny and 7 degrees today’ — weather or climate?","PDF"],
+["klimat","”I södra Sverige är vintrarna oftast milda.” Är det väder eller klimat?","Klimat",["Väder","Temperatur","Nederbörd"],"‘Winters in the south are usually mild’ — weather or climate?","s. 23"],
+["klimat","Hur får man reda på vilket klimat en plats har?","Genom att mäta temperatur och nederbörd varje dag i flera år",["Genom att titta på himlen och molnen en dag", "Genom att fråga någon som har bott där ett tag", "Genom att läsa väderrapporten för imorgon på tv"],"How do you find out a place's climate?","s. 23"],
+["klimat","Vad är nederbörd?","Regn, snö eller hagel som faller",["Vind, dimma och moln","Hur varmt eller kallt det är","Hur mycket solen skiner"],"What is precipitation (nederbörd)?","s. 23"],
+["klimat","Vilket av dessa är nederbörd?","Snö",["Vind","Dimma","Solsken"],"Which of these is precipitation?","s. 23"],
+["klimat","Vad visar temperatur?","Hur varmt eller kallt det är",["Hur mycket det regnar","Hur hårt det blåser","Hur många moln det finns"],"What does temperature show?","s. 23"],
+["klimat","I vilken enhet mäter man temperatur i Sverige?","Grader Celsius",["Meter","Kilogram","Mil"],"What unit is temperature measured in?","s. 23"],
+["klimat","Vid hur många grader fryser vatten till is?","0 grader",["10 grader","−10 grader","100 grader"],"At what temperature does water freeze?","s. 23"],
+["klimat","Vad betyder det om termometern visar många minusgrader?","Att det är mycket kallt",["Att det är mycket varmt","Att det regnar","Att det blåser hårt"],"What do many minus degrees mean?","s. 23"],
+["klimat","Varför är klimatet olika i norra och södra Sverige?","Sverige är avlångt och det är kallare längre norrut",["Det regnar bara i södra delen av Sverige", "Norra Sverige ligger närmare solen än södra", "Södra Sverige ligger närmare Nordpolen"],"Why does the climate differ between north and south?","s. 23"],
+["klimat","Vilken annan skillnad i klimat finns det i Sverige?","Mellan kusten och längre in i landet",["Mellan stora städer och små byar", "Mellan dagen och natten under året", "Mellan höga berg och låga dalar"],"What other climate difference is there?","s. 23"],
+["klimat","Var ligger Treriksröset?","I Lappland, längst i norr",["I Skåne, längst i söder","På Gotland","I Dalarna"],"Where is Treriksröset?","s. 23"],
+["klimat","Var ligger Smygehuk?","I Skåne, längst i söder",["I Lappland, längst i norr","I Blekinge","På Öland"],"Where is Smygehuk?","s. 23"],
+["klimat","Vilken plats har lägst medeltemperatur i januari?","Treriksröset, −14 °C",["Smygehuk, 0 °C","Smygehuk, −14 °C","Treriksröset, 0 °C"],"Which place has the lowest January average?","s. 23"],
+["klimat","Vad är medeltemperaturen i juni i Smygehuk?","+14 °C",["+6 °C","0 °C","+26 °C"],"What is the June average in Smygehuk?","s. 23"],
+["klimat","Hur lång tid skulle det ta att promenera från Treriksröset till Smygehuk?","Tre månader",["Tre dagar","Tre veckor","Tre år"],"How long to walk from Treriksröset to Smygehuk?","s. 23"],
+["klimat","Var kommer de första vårblommorna upp?","Längst söderut, i Smygehuk",["Längst norrut, vid Treriksröset","I Stockholm","På Öland"],"Where do the first spring flowers appear?","s. 23"],
+["klimat","Hur är det vid Treriksröset i mars?","Fortfarande vinter med snö kvar",["Vår med blommor och grönt gräs", "Varm sommar med badväder", "Höst med mycket regn"],"What is Treriksröset like in March?","s. 23"],
+["klimat","Vad är växthuseffekten?","Gaser i luften håller kvar en del av jordens värme",["Värme som kommer från ett växthus i trädgården", "Att växter växer snabbare när solen skiner", "Att solen blir starkare och varmare med åren"],"What is the greenhouse effect?","s. 24"],
+["klimat","Vilken av dessa är en växthusgas?","Koldioxid",["Syre","Kväve","Helium"],"Which is a greenhouse gas?","s. 25"],
+["klimat","Vad bildas när vi bränner olja och kol?","Växthusgaser",["Syre","Sötvatten","Is"],"What forms when we burn oil and coal?","s. 25"],
+["klimat","Varför blir det varmare på jorden, tror forskarna?","Vi släpper ut för mycket växthusgaser",["Solen har kommit närmare jorden","Det finns för mycket skog","Golfströmmen har stannat"],"Why is Earth getting warmer, researchers think?","s. 24"],
+["klimat","Har klimatet alltid förändrats?","Ja, det har det alltid gjort",["Nej, bara de senaste åren","Nej, aldrig","Nej, bara på sommaren"],"Has climate always changed?","s. 24"],
+["klimat","Vad händer med inlandsisar och glaciärer när det blir varmare?","De smälter och havsytan stiger",["De växer och blir tjockare","De blir saltare","De flyttar norrut"],"What happens to ice sheets when it gets warmer?","s. 24"],
+["klimat","Vad kan hända när jorden blir varmare?","Mer extremt väder, till exempel stormar, torka och översvämningar",["Det slutar regna helt på alla platser på jorden", "Alla årstider blir lika kalla över hela jorden", "Det bildas mer is och snö på hela jorden"],"What can happen when Earth gets warmer?","s. 24"],
+["klimat","Vad kallas det när klimatet ändras och det blir allt varmare på jorden?","Klimatförändring",["Årstidsväxling","Landhöjning","Erosion"],"What is it called when the climate gets warmer?","s. 25"],
+["klimat","Vad är viktigast att göra för att minska klimatförändringen?","Använda mindre olja, naturgas och kol som energi",["Använda mer olja, naturgas och kol än idag", "Fälla fler av jordens skogar för att få virke", "Bygga fler vägar så att fler kan åka bil"],"What is most important to reduce climate change?","s. 25"],
+["klimat","Vilket yrke har Pär Holmgren som svarar på frågorna om klimatförändringen?","Meteorolog",["Geolog","Biolog","Kartritare"],"What is Pär Holmgren's job?","s. 25"],
+["klimat","Hur mycket av jordens vatten är sötvatten?","Ungefär 3 %",["Ungefär 50 %","Ungefär 97 %","Ungefär 25 %"],"How much of Earth's water is fresh water?","s. 26"],
+["klimat","Vad kallas vattnet i haven?","Saltvatten",["Sötvatten","Smältvatten","Regnvatten"],"What is sea water called?","s. 26"],
+["klimat","Var finns sötvattnet?","Under marken, i sjöar och floder och i isen vid polerna",["Bara i haven och i de stora oceanerna på jorden", "Bara uppe i molnen och i regnet som faller", "Bara i Sverige och de andra nordiska länderna"],"Where is fresh water found?","s. 26"],
+["klimat","Vad kallas det när man tar bort saltet ur havsvatten för att göra det drickbart?","Avsaltning",["Vittring","Erosion","Förångning"],"What is removing salt from sea water called?","s. 26"],
+["klimat","Var är vattenbrist vanligt?","I varma länder där det regnar lite",["I Sverige och andra länder i Norden", "Nära Nordpolen och Sydpolen", "Där det regnar varje dag hela året"],"Where is water shortage common?","s. 26"],
+["klimat","Har Sverige mycket eller lite sötvatten?","Mycket, det är bara att vrida på kranen",["Lite, vi måste spara varje droppe","Inget, vi köper allt vatten","Bara på vintern"],"Does Sweden have a lot of fresh water?","s. 26"],
+["klimat","Vad är ”motorn” i vattnets kretslopp?","Solens värme",["Vinden","Floderna","Månen"],"What is the ‘engine’ of the water cycle?","s. 27"],
+["klimat","Vad händer när solens strålar värmer havet?","Vattenånga stiger upp i luften",["Havet fryser till tjock is", "Vattnet i havet blir salt", "Regnet faller ner direkt igen"],"What happens when sunlight warms the sea?","s. 27"],
+["klimat","Hur bildas moln?","Vattenånga kyls av högre upp och blir små droppar",["Is smälter på marken och stiger upp som rök", "Vinden blåser upp sand och damm mot himlen", "Floder rinner uppåt mot himlen och blir moln"],"How do clouds form?","s. 27"],
+["klimat","När faller vattendropparna som regn, snö eller hagel?","När molndropparna blivit för stora och tunga",["När solen går upp på morgonen igen", "När det blir natt och molnen försvinner", "När molnet ligger helt stilla på himlen"],"When do drops fall as rain or snow?","s. 27"],
+["klimat","Vart rinner regnvattnet till slut?","Tillbaka ut i havet",["Upp till solen","Ner till jordens mitt","Bort till rymden"],"Where does rain water end up?","s. 27"]
+];
+// [area, term, definition, English]
+const T=[
+["delar","Landskap","En av Sveriges 25 geografiska delar.","Province — one of Sweden's 25"],
+["delar","Landsdel","Götaland, Svealand eller Norrland.","Region — one of the three big parts"],
+["delar","Tätort","En plats där många bor nära varandra (minst 200 personer).","Built-up area"],
+["delar","Glesbygd","Ett område där få människor bor.","Sparsely populated area"],
+["delar","Norden","Sverige, Norge, Danmark, Finland och Island.","The Nordic countries"],
+["delar","Världsdel","En av jordens sju stora delar.","Continent"],
+["delar","Baltiska länderna","Estland, Lettland och Litauen.","The Baltic states"],
+["delar","Dialekt","Olika sätt att tala samma språk.","Dialect"],
+["delar","Golfströmmen","En varm havsström som värmer Sveriges och Norges kuster.","The Gulf Stream"],
+["delar","EU","Europeiska unionen, ett samarbete mellan länder i Europa.","The European Union"],
+["kartan","Karta","En förminskad bild av en plats.","Map"],
+["kartan","Väderstreck","Norr, söder, öster och väster.","Compass directions"],
+["kartan","Karttecken","Symboler som visar saker på kartan.","Map symbols"],
+["kartan","Teckenförklaring","Visar vad kartans symboler betyder.","Map legend"],
+["kartan","Skala","Visar hur mycket kartan är förminskad.","Scale"],
+["kartan","Skalstock","Hjälper dig att mäta avstånd på kartan.","Scale bar"],
+["kartan","Register","Alfabetisk lista över platser i kartboken.","Index"],
+["kartan","Ekvatorn","Linjen mitt på jordklotet som delar det i norra och södra halvklotet.","Equator"],
+["kartan","Gradnät","Nätet av längdgrader och breddgrader runt jordgloben.","Grid of latitude/longitude"],
+["kartan","Atlas","Ett annat ord för kartbok.","Atlas"],
+["kartan","GPS","System som med hjälp av satelliter räknar ut var man befinner sig på jorden.","GPS"],
+["kartan","Kompass","Visar riktningen i de olika väderstrecken. Nålen pekar alltid åt norr.","Compass"],
+["natur","Naturlandskap","Berg, sjöar, skogar och annan natur.","Natural landscape"],
+["natur","Erosion","När vind, vatten eller is förändrar landskapet och flyttar jord och sand.","Erosion"],
+["natur","Vittring","När berg bryts sönder, till exempel av frostsprängning.","Weathering"],
+["natur","Istid","En lång period med mycket stora isområden.","Ice age"],
+["natur","Inlandsis","Ett stort och tjockt täcke av is över land.","Ice sheet"],
+["natur","Landhöjning","När marken långsamt höjer sig.","Land uplift"],
+["natur","Flyttblock","En stor sten som flyttats av inlandsisen.","Erratic boulder"],
+["natur","Isräfflor","Repor i berget som stenar i isen skrapade.","Glacial striations"],
+["natur","Rullstensås","En lång ås av grus och sand från smältvattnet.","Esker"],
+["natur","Lerjord","Gammal havsbotten som är bra att odla i.","Clay soil"],
+["klimat","Årstider","Vinter, vår, sommar och höst.","Seasons"],
+["klimat","Norra halvklotet","Jordens halva norr om ekvatorn.","Northern hemisphere"],
+["klimat","Väder","Hur det är ute under en kort tid. Till exempel: idag är det soligt och 7 grader.","Weather"],
+["klimat","Klimat","Hur vädret brukar vara under lång tid.","Climate"],
+["klimat","Temperatur","Hur varmt eller kallt det är.","Temperature"],
+["klimat","Nederbörd","Regn, snö eller hagel som faller.","Precipitation"],
+["klimat","Växthuseffekt","Gaser i luften håller kvar en del av jordens värme.","Greenhouse effect"],
+["klimat","Växthusgas","Gaser som hindrar värmen från solen att åka tillbaka ut i rymden, till exempel koldioxid.","Greenhouse gas"],
+["klimat","Klimatförändring","Klimatet ändras och det blir allt varmare på jorden.","Climate change"],
+["klimat","Sötvatten","Vatten som inte är salt, ungefär 3 % av jordens vatten.","Fresh water"],
+["klimat","Avsaltning","När man tar bort saltet ur havsvatten så att det går att dricka.","Desalination"],
+["klimat","Vattnets kretslopp","Vattnet flyttar sig hela tiden mellan hav, himmel och jord. Solens värme är motorn.","The water cycle"]
+];
+// Teacher's example questions with model answers
+const F=[
+["delar","Hur många landskap har Sverige?","25 landskap."],
+["delar","Vad heter Sveriges tre landsdelar?","Götaland, Svealand och Norrland."],
+["delar","Vad är skillnaden mellan tätort och glesbygd?","I en tätort bor många nära varandra (minst 200 personer, husen ligger tätt). I glesbygd bor det få människor."],
+["delar","Vilka länder ingår i Norden?","Sverige, Norge, Danmark, Finland och Island."],
+["delar","Vilka länder har Sverige landgräns mot?","Norge och Finland."],
+["delar","Vilken världsdel ligger Sverige i?","Europa."],
+["kartan","Vilka är de fyra väderstrecken?","Norr, söder, öster och väster."],
+["kartan","Vad kan en karta hjälpa oss med? När kan du behöva använda en karta?","Att hitta rätt och lära oss om platser vi aldrig varit på. Till exempel i skogen (orienteringskarta), på båt (sjökort) eller i tunnelbanan."],
+["kartan","Vad betyder blå färg på en vanlig karta?","Vatten (hav, sjöar, åar)."],
+["kartan","Vad är en teckenförklaring?","Den visar vad kartans tecken och färger betyder."],
+["kartan","Hur hittar du en stad med hjälp av registret?","Leta upp staden i registret (alfabetisk ordning). Där står t.ex. 13 B 3: slå upp sidan 13, sätt ett finger på B överst och ett på 3 i kanten och följ dem tills de möts."],
+["natur","Hur kan vind och vatten förändra landskapet?","Vind flyttar sand och jord. Vatten i floder flyttar jord, grus och stenar. Vågor bryter sönder klippor. Vatten som fryser i sprickor spräcker berget."],
+["natur","När var den senaste istiden?","Isen var som störst för ungefär 25 000 år sedan och började smälta för ungefär 18 000 år sedan."],
+["natur","Vilka spår kan vi idag se från istiden?","Isräfflor i berghällar, flyttblock, rullstensåsar och lerjord."],
+["natur","Varför höjer sig marken på vissa platser?","Den tunga isen tryckte ner marken. När isen smälte började marken långsamt höja sig igen (landhöjning), nästan 1 cm per år i norr."],
+["klimat","Vilka är de fyra årstiderna?","Vinter, vår, sommar och höst."],
+["klimat","Varför har vi olika årstider i Sverige?","Jorden snurrar runt solen (ett varv = ett år) och jordklotet lutar. När norra halvklotet lutar mot solen är det sommar, när det lutar bort är det vinter."],
+["klimat","Vad är skillnaden mellan väder och klimat?","Väder är hur det är ute en kort tid. Klimat är hur vädret brukar vara under lång tid."],
+["klimat","Ge två exempel på nederbörd.","Regn, snö eller hagel."],
+["klimat","Varför är klimatet olika i norra och södra Sverige?","Sverige är ett avlångt land. Längst i norr är det mycket kallare (Treriksröset −14 °C i januari, Smygehuk 0 °C). Det skiljer också mellan kusten och inlandet."]
+];
+// [from, to, label, area/kind, title, adult text, text for Lev]
+const PLAN=[
+["2026-11-04","2026-11-04","ons 4/11","delar","Sveriges delar","Läs s. 6–11. Gör begreppskorten och quizet för Sveriges delar.","Läs s. 6–11 i boken. Gör sedan quizet om Sveriges delar."],
+["2026-11-05","2026-11-05","tor 5/11","kartan","Kartan","Läs s. 12–17. Träna registret (Falkenberg 13 B 3) och väderstrecken.","Läs s. 12–17 i boken. Gör sedan quizet om kartan."],
+["2026-11-06","2026-11-06","fre 6/11","natur","Naturlandskapet","Läs s. 18–21. Förklara istiden och landhöjningen med egna ord.","Läs s. 18–21 i boken. Gör sedan quizet om istiden och naturen."],
+["2026-11-07","2026-11-08","lör–sön","klimat","Årstider, väder & klimat","Läs s. 22–27. Rita jorden runt solen och visa varför vi har årstider. Kör ett quiz per område.","Läs s. 22–27 i boken. Gör sedan quizet om årstider, väder och klimat."],
+["2026-11-09","2026-11-09","mån 9/11","alla","Allt blandat","Kör ett quiz med alla områden (20 frågor). Titta på Översikt och öva det som är rött.","Ett stort quiz med 20 frågor från alla områden."],
+["2026-11-10","2026-11-10","tis 10/11","svaga","Repetera","Kör ”Öva på det svåra” och begreppskorten ”Öva mer”. Tidigt i säng!","Öva på frågorna du har missat. Gå sedan och lägg dig tidigt!"],
+["2026-11-11","2026-11-11","ons 11/11","prov","Provet kl. 8.15","Digitalt i Digiexam. Lycka till, Lev!","Provet är idag kl. 8.15. Du har tränat massor. Lycka till!"]
+];
+
+// ---------- helpers
+// Progress (stats, hist, marks, plan) is kept in the artifact's web database (doc progress/lev),
+// shared by everyone who can save on this page, with a copy in this browser as fallback.
+// "en" stays a per-device setting.
+const SYNC=["stats","hist","marks","plan"];
+const local={get(k,d){try{const v=localStorage.getItem("geo:"+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem("geo:"+k,JSON.stringify(v))}catch(e){}}};
+const mem={};SYNC.forEach(k=>mem[k]=local.get(k,undefined));
+let memT=local.get("t",0);
+const cloud={ref:null,status:"local",timer:null,busy:false,again:false,lastSent:null};
+const store={
+  get(k,d){if(SYNC.includes(k))return mem[k]==null?d:JSON.parse(JSON.stringify(mem[k]));return local.get(k,d)},
+  set(k,v){local.set(k,v);if(!SYNC.includes(k))return;mem[k]=v;memT=Date.now();local.set("t",memT);scheduleSave()}
+};
+function payload(){const o={t:memT};SYNC.forEach(k=>o[k]=JSON.stringify(mem[k]==null?null:mem[k]));return o}
+function scheduleSave(){if(!cloud.ref)return;clearTimeout(cloud.timer);cloud.timer=setTimeout(saveNow,700)}
+async function saveNow(){
+  if(!cloud.ref)return;
+  if(cloud.busy){cloud.again=true;return}
+  cloud.busy=true;const body=payload();
+  try{await cloud.ref.set(body);cloud.lastSent=body.t;setStatus("cloud")}
+  catch(e){
+    if(e&&e.code==="unavailable"){await new Promise(r=>setTimeout(r,800+Math.random()*1200));try{await cloud.ref.set(body);cloud.lastSent=body.t;setStatus("cloud")}catch(e2){setStatus("error")}}
+    else{setStatus(e&&e.code==="invalid_argument"?"readonly":"error");if(e&&(e.code==="invalid_argument"||e.code==="revoked"))cloud.ref=null}
+  }
+  cloud.busy=false;if(cloud.again){cloud.again=false;saveNow()}
+}
+function adoptRemote(d){
+  if(!d||typeof d.t!=="number")return false;
+  if(d.t<=memT)return false;
+  SYNC.forEach(k=>{try{const v=d[k]==null?undefined:JSON.parse(d[k]);mem[k]=v===null?undefined:v;local.set(k,mem[k]===undefined?null:mem[k])}catch(e){}});
+  memT=d.t;local.set("t",memT);return true;
+}
+// First load on a device: combine what this browser has with the web copy, so no device's progress is lost.
+// Returns true when the combined result differs from the web copy (and should be saved).
+function mergeRemote(d){
+  const R={};SYNC.forEach(k=>{try{R[k]=d&&d[k]!=null?JSON.parse(d[k]):null}catch(e){R[k]=null}});
+  const rt=d&&typeof d.t==="number"?d.t:0,localNewer=memT>rt;
+  const L={};SYNC.forEach(k=>L[k]=mem[k]==null?null:mem[k]);
+  const stats={...(R.stats||{})};Object.entries(L.stats||{}).forEach(([q,s])=>{const r=stats[q];if(!r||(s.a||0)>(r.a||0)||((s.a||0)===(r.a||0)&&localNewer))stats[q]=s});
+  const seen=new Set(),hist=[...(R.hist||[]),...(L.hist||[])].filter(h=>h&&!seen.has(h.t)&&seen.add(h.t)).sort((a,b)=>a.t-b.t).slice(-30);
+  const marks=localNewer?{...(R.marks||{}),...(L.marks||{})}:{...(L.marks||{}),...(R.marks||{})};
+  const plan={...(R.plan||{})};Object.entries(L.plan||{}).forEach(([i,v])=>{if(v)plan[i]=true});
+  const M={stats,hist,marks,plan};
+  SYNC.forEach(k=>{mem[k]=M[k];local.set(k,M[k])});
+  const same=SYNC.every(k=>JSON.stringify(M[k])===JSON.stringify(R[k]||(k==="hist"?[]:{})));
+  memT=same?Math.max(rt,memT):Math.max(Date.now(),rt+1);local.set("t",memT);
+  return !same;
+}
+function setStatus(s){cloud.status=s;const el=document.getElementById("syncnote");if(el)el.innerHTML=syncText()}
+function syncText(){return {cloud:"Sparas på webben",local:"Allt sparas på den här enheten",connecting:"Ansluter…",readonly:"Kan inte spara på webben med det här kontot",error:"Kunde inte spara på webben just nu"}[cloud.status]}
+async function connectCloud(){
+  if(!window.claude||!claude.use)return;
+  setStatus("connecting");
+  let db=null;try{db=await claude.use("db")}catch(e){}
+  if(!db){setStatus("local");return}
+  let ref;try{ref=db.doc("progress/lev")}catch(e){setStatus("local");return}
+  let first=true;
+  const giveUp=setTimeout(()=>{if(first)setStatus("error")},10000);
+  ref.onSnapshot(snap=>{
+    const d=snap.exists?snap.data():null;
+    if(first&&!snap.metadata.fromCache){
+      first=false;clearTimeout(giveUp);cloud.ref=ref;
+      if(mergeRemote(d)){refreshView();saveNow()}else setStatus("cloud");
+      return;
+    }
+    if(!first&&d&&d.t!==cloud.lastSent&&adoptRemote(d))refreshView();
+  },e=>{clearTimeout(giveUp);cloud.ref=null;setStatus(e&&e.code==="revoked"?"local":"error")});
+}
+function refreshView(){if(["home","topic","adult"].includes(state.screen))render()}
+const state={screen:"home",area:null,en:store.get("en",false),adultTab:"dash",confirmReset:false,quitSure:false};
+const app=document.getElementById("app");
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const tag=a=>{const x=AREAS[a];return `<span class="tag" style="background:var(${x.bg});color:var(${x.col})">${x.name}</span>`};
+const tv=a=>a&&AREAS[a]?`--tc:var(${AREAS[a].col});--tb:var(${AREAS[a].bg})`:`--tc:var(--water);--tb:var(--water-bg)`;
+const pct=(c,a)=>a?Math.round(c/a*100):null;
+const todayISO=()=>{const n=new Date();return n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0")+"-"+String(n.getDate()).padStart(2,"0")};
+const enBtn=()=>`<button class="pill" data-act="en" aria-pressed="${state.en}" title="Visa frågorna på engelska också">English</button>`;
+
+// ---------- progress
+const getStats=()=>store.get("stats",{});
+function statusOf(q,S){
+  const s=S[q[1]];if(!s)return"new";
+  const l=s.h[s.h.length-1];
+  if(l===0||(s.a>=3&&s.c/s.a<0.5))return"weak";
+  if(s.h.length>=2&&s.h[s.h.length-2]===1&&l===1)return"mastered";
+  return"learning";
+}
+function record(q,ok){const S=getStats();const s=S[q[1]]||{a:0,c:0,h:[]};s.a++;if(ok)s.c++;s.h.push(ok?1:0);s.h=s.h.slice(-3);S[q[1]]=s;store.set("stats",S)}
+function summarize(area){
+  const S=getStats(),o={tot:0,new:0,weak:0,learning:0,mastered:0,a:0,c:0};
+  Q.forEach(q=>{if(area&&q[0]!==area)return;o.tot++;o[statusOf(q,S)]++;const s=S[q[1]];if(s){o.a+=s.a;o.c+=s.c}});
+  return o;
+}
+function daysLeft(){const t=new Date(2026,10,11),n=new Date();return Math.round((t-new Date(n.getFullYear(),n.getMonth(),n.getDate()))/864e5)}
+function missionIndex(){
+  const iso=todayISO();
+  const i=PLAN.findIndex(p=>p[0]<=iso&&iso<=p[1]);
+  if(i>=0)return i;
+  return iso<PLAN[0][0]?0:-1;
+}
+
+// ---------- HOME
+function renderHome(){
+  const d=daysLeft(),all=summarize(null),mi=missionIndex(),done=store.get("plan",{});
+  const weak=all.weak;
+  let mission="";
+  if(mi<0){
+    mission=`<section class="mission" style="--c:var(--good);--cb:var(--good-bg)"><p class="eyebrow">Provet är gjort</p><h2>Bra kämpat, Lev!</h2><p>Du kan fortsätta öva om du vill.</p></section>`;
+  }else{
+    const p=PLAN[mi],a=AREAS[p[3]];
+    const c=a?a.col:p[3]==="prov"?"--town":p[3]==="svaga"?"--warn":"--water";
+    const cb=a?a.bg:p[3]==="prov"?"--town-bg":p[3]==="svaga"?"--warn-bg":"--water-bg";
+    const isDone=!!done[mi];
+    const btnLabel=p[3]==="prov"?"Kör ett sista snabbquiz":isDone?"Kör en gång till":"Starta dagens uppdrag";
+    mission=`<section class="mission" style="--c:var(${c});--cb:var(${cb})">
+      <p class="eyebrow">Dagens uppdrag · ${p[2]}</p>
+      <h2>${esc(p[4])}</h2>
+      <p>${esc(p[6])}</p>
+      ${isDone?`<p class="done">${ICON.check}Klart för idag. Snyggt jobbat!</p>`:""}
+      <button class="btn${isDone?" ghost":""}" data-act="mission">${btnLabel} →</button>
+    </section>`;
+  }
+  const countdown=d>0?`<div class="days" aria-label="${d} dagar kvar till provet"><b>${d}</b><span>${d===1?"dag kvar":"dagar kvar"}</span></div>`:d===0?`<div class="days"><b>Idag</b><span>kl. 8.15</span></div>`:"";
+  app.innerHTML=`
+  <header class="hello">
+    <div><p class="eyebrow">Kartkoll · provet ons 11 nov</p><h1>Hej Lev!</h1></div>
+    ${countdown}
+  </header>
+  ${mission}
+  <section class="score" aria-label="Hur mycket du kan">
+    <div class="line"><span>Frågor du kan</span><b>${all.mastered} <span class="small">av ${all.tot}</span></b></div>
+    <div class="bar"><i style="width:${all.mastered/all.tot*100}%"></i></div>
+    <p class="small">En fråga räknas som klar när du svarat rätt två gånger i rad.</p>
+  </section>
+  <h2 class="sec">Välj ett område</h2>
+  <div class="topics">${Object.entries(AREAS).map(([k,a])=>{const s=summarize(k);return `
+    <button class="topic" data-act="topic:${k}" style="${tv(k)}">
+      <span class="ic">${ICON[k]}</span>
+      <b>${a.name}</b>
+      <span class="small">Du kan ${s.mastered} av ${s.tot}</span>
+      <span class="bar"><i style="width:${s.mastered/s.tot*100}%"></i></span>
+    </button>`}).join("")}</div>
+  <div class="extra">
+    <button class="row-btn" data-act="mix"><span class="ic">${ICON.mix}</span><span><b>Blanda allt</b><span class="small">10 frågor från alla områden</span></span><span class="go">›</span></button>
+    ${weak?`<button class="row-btn hard" data-act="weak:alla"><span class="ic">${ICON.hard}</span><span><b>Öva på det svåra</b><span class="small">${weak} ${weak===1?"fråga":"frågor"} du har missat</span></span><span class="go">›</span></button>`:""}
+    <button class="row-btn" data-act="cards:alla"><span class="ic">${ICON.cards}</span><span><b>Begreppskort</b><span class="small">Lär dig orden, ${T.length} kort</span></span><span class="go">›</span></button>
+  </div>
+  <div class="foot">${enBtn()}<button class="pill" data-act="adult">För vuxna ›</button></div>
+  <p class="small" id="syncnote" role="status">${syncText()}</p>`;
+}
+
+// ---------- TOPIC
+function renderTopic(){
+  const k=state.area,a=AREAS[k],s=summarize(k),nCards=T.filter(t=>t[0]===k).length;
+  app.innerHTML=`
+  <div class="topbar"><button class="back" data-act="home">← Hem</button></div>
+  <section class="topic-hero" style="${tv(k)}">
+    <span class="ic">${ICON[k]}</span>
+    <h1>${a.name}</h1>
+    <p>Läs i boken på ${a.pages}</p>
+    <div class="bar"><i style="width:${s.mastered/s.tot*100}%"></i></div>
+    <p class="small" style="color:var(--ink)">Du kan ${s.mastered} av ${s.tot} frågor</p>
+  </section>
+  <div class="stack-btns">
+    <button class="btn" data-act="quiz:${k}">Starta quiz · 10 frågor</button>
+    <button class="btn ghost" data-act="cards:${k}">Begreppskort · ${nCards} ord</button>
+    ${s.weak?`<button class="btn orange" data-act="weak:${k}">Öva på det svåra · ${s.weak} ${s.weak===1?"fråga":"frågor"}</button>`:""}
+  </div>`;
+}
+
+// ---------- QUIZ
+let quiz=null;
+function startQuiz(o){
+  const S=getStats();
+  const base=o.list||Q.filter(q=>!o.area||o.area==="alla"||q[0]===o.area);
+  let pool;
+  if(o.mode==="svaga"){
+    const by={weak:[],learning:[],new:[],mastered:[]};base.forEach(q=>by[statusOf(q,S)].push(q));
+    pool=[...shuffle(by.weak),...shuffle(by.learning),...shuffle(by.new),...shuffle(by.mastered)];
+  }else pool=shuffle(base);
+  pool=shuffle(pool.slice(0,o.n||pool.length));
+  quiz={o,pool:pool.map(q=>({q,opts:shuffle([q[2],...q[3]])})),i:0,score:0,streak:0,best:0,wrong:[],picked:null,saved:false};
+  state.screen="quiz";state.quitSure=false;render();window.scrollTo(0,0);
+}
+const PRAISE=["Rätt!","Snyggt!","Toppen!","Helt rätt!","Bra!","Ja, precis!"];
+function renderQuiz(){
+  if(quiz.i>=quiz.pool.length)return renderResult();
+  const {q,opts}=quiz.pool[quiz.i],n=quiz.pool.length,ans=quiz.picked!==null;
+  const ok=ans&&opts[quiz.picked]===q[2];
+  app.innerHTML=`
+  <div class="topbar">
+    <button class="back${state.quitSure?" sure":""}" data-act="quit">${state.quitSure?"Säker? Tryck igen":"✕ Sluta"}</button>
+    <div class="prog"><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="${n}" aria-valuenow="${quiz.i+(ans?1:0)}"><i style="width:${(quiz.i+(ans?1:0))/n*100}%"></i></div><span>${quiz.i+1}/${n}</span></div>
+  </div>
+  <section class="qcard">
+    <div class="qmeta">${tag(q[0])}${quiz.streak>=2?`<span class="streak">${quiz.streak} rätt i rad!</span>`:""}</div>
+    <p class="q" id="qtext">${esc(q[1])}</p>
+    ${state.en?`<p class="en">${esc(q[4])}</p>`:""}
+    <div class="row" style="display:flex;gap:8px;flex-wrap:wrap">
+      ${enBtn()}
+    </div>
+    <div class="opts">${opts.map((o,i)=>{
+      let cls="",m="";
+      if(ans){if(o===q[2]){cls="ok";m="✓"}else if(i===quiz.picked){cls="no";m="✗"}else cls="dim"}
+      return `<button class="opt ${cls}" data-act="pick:${i}" ${ans?"disabled":""}><span class="k">${"ABCD"[i]}</span><span class="t">${esc(o)}</span><span class="m" aria-hidden="true">${m}</span></button>`}).join("")}</div>
+    ${ans?`<div class="fb ${ok?"good":"bad"}" role="status">
+      <span class="h">${ok?PRAISE[(quiz.i+quiz.score)%PRAISE.length]:"Nästan!"}</span>
+      ${ok?"":`<span>Rätt svar är: <b>${esc(q[2])}</b></span>`}
+      <span class="small">Det står i boken ${q[5]==="PDF"?"på lärarens lapp":q[5]}.</span>
+    </div>
+    <button class="btn" data-act="next" id="next">${quiz.i+1>=n?"Se hur det gick":"Nästa fråga"} →</button>`:""}
+  </section>
+  ${ans?"":`<p class="small keys">Tips: du kan trycka 1, 2, 3 eller 4 på tangentbordet.</p>`}`;
+  if(ans){const b=document.getElementById("next");b&&b.focus({preventScroll:true})}
+}
+function pick(i){
+  if(quiz.picked!==null)return;
+  const {q,opts}=quiz.pool[quiz.i];quiz.picked=i;state.quitSure=false;
+  const ok=opts[i]===q[2];record(q,ok);
+  if(ok){quiz.score++;quiz.streak++;quiz.best=Math.max(quiz.best,quiz.streak)}else{quiz.wrong.push(q);quiz.streak=0}
+  renderQuiz();
+  const fb=app.querySelector(".fb");fb&&fb.scrollIntoView({block:"nearest",behavior:"smooth"});
+}
+function nextQ(){quiz.i++;quiz.picked=null;renderQuiz();window.scrollTo(0,0)}
+function renderResult(){
+  const n=quiz.pool.length,p=Math.round(quiz.score/n*100);
+  const stars=p>=90?3:p>=70?2:1;
+  if(!quiz.saved){
+    quiz.saved=true;
+    const H=store.get("hist",[]);H.push({t:Date.now(),n,s:quiz.score,area:quiz.o.area||"alla"});store.set("hist",H.slice(-30));
+    if(quiz.o.mission!=null){const d=store.get("plan",{});d[quiz.o.mission]=true;store.set("plan",d)}
+  }
+  const msg=p>=90?"Superbra! Du är redo för provet.":p>=70?"Bra jobbat! Kolla in de du missade, så sitter de snart.":"Bra att du tränar! Varje gång blir du lite bättre.";
+  const colors=["--water","--town","--forest","--field","--star"];
+  const conf=stars>=2?`<div class="confetti" aria-hidden="true">${Array.from({length:28},(_,i)=>`<i style="left:${Math.random()*100}%;background:var(${colors[i%5]});animation-delay:${(Math.random()*.6).toFixed(2)}s"></i>`).join("")}</div>`:"";
+  app.innerHTML=`
+  <section class="result">
+    ${conf}
+    <div class="stars" role="img" aria-label="${stars} av 3 stjärnor">${[0,1,2].map(i=>ICON.star.replace("<svg",`<svg class="${i<stars?"on":""}"`)).join("")}</div>
+    <p class="big">${quiz.score} av ${n} rätt</p>
+    <p class="msg">${msg}</p>
+    ${quiz.best>=3?`<p class="small">Längsta raden: ${quiz.best} rätt i rad</p>`:""}
+    <div class="stack-btns">
+      ${quiz.wrong.length?`<button class="btn orange" data-act="redo">Öva på ${quiz.wrong.length===1?"den du missade":`de ${quiz.wrong.length} du missade`}</button>`:""}
+      <button class="btn${quiz.wrong.length?" ghost":""}" data-act="again">Nytt quiz</button>
+      <button class="btn ghost" data-act="home">Hem</button>
+    </div>
+  </section>
+  ${quiz.wrong.length?`<section class="remember"><h2 class="sec">Kom ihåg</h2><ul>${quiz.wrong.map(q=>`<li><span>${esc(q[1])}</span><span class="a">${esc(q[2])}</span><span class="small">${q[5]==="PDF"?"Lärarens lapp":"Boken "+q[5]}</span></li>`).join("")}</ul></section>`:""}`;
+}
+
+// ---------- FLASHCARDS
+let cards=null;
+function startCards(area,list){
+  const deck=list||shuffle(T.filter(t=>area==="alla"||t[0]===area));
+  cards={area,deck,i:0,flip:false,known:0,more:[]};state.screen="cards";render();window.scrollTo(0,0);
+}
+function renderCards(){
+  if(cards.i>=cards.deck.length)return renderCardsDone();
+  const t=cards.deck[cards.i],n=cards.deck.length;
+  app.innerHTML=`
+  <div class="topbar">
+    <button class="back" data-act="home">← Hem</button>
+    <div class="prog"><div class="bar"><i style="width:${cards.i/n*100}%"></i></div><span>${cards.i+1}/${n}</span></div>
+  </div>
+  <div class="flipwrap" style="${tv(t[0])}">
+    <button class="flip${cards.flip?" on":""}" id="card" data-act="flip" aria-label="${cards.flip?esc(t[2]):`${esc(t[1])}. Tryck för att vända kortet.`}">
+      <span class="face front">${tag(t[0])}<span class="term">${esc(t[1])}</span><span class="hint">Vad betyder ordet? Säg det högt. Tryck sedan på kortet.</span></span>
+      <span class="face back-face"><span class="small" style="color:var(--ink)">${esc(t[1])}</span><span class="def">${esc(t[2])}</span>${state.en?`<span class="en">${esc(t[3])}</span>`:""}</span>
+    </button>
+  </div>
+  <div id="cardBtns">${cardBtns()}</div>
+  <div class="foot" style="border:0;padding:0">${cards.i>0?`<button class="prev" data-act="prevcard">← Förra kortet</button>`:"<span></span>"}${enBtn()}</div>`;
+}
+function cardBtns(){
+  return cards.flip
+    ?`<p class="small" style="text-align:center;margin-bottom:10px">Kunde du det?</p><div class="two"><button class="btn green" data-act="kan">Ja, jag kunde!</button><button class="btn orange" data-act="mer">Öva mer</button></div>`
+    :`<button class="btn" data-act="flip">Vänd kortet</button>`;
+}
+function flipCard(){
+  cards.flip=!cards.flip;
+  document.getElementById("card").classList.toggle("on",cards.flip);
+  document.getElementById("cardBtns").innerHTML=cardBtns();
+}
+function markCard(m){
+  const t=cards.deck[cards.i],s=store.get("marks",{});s[t[1]]=m;store.set("marks",s);
+  if(m==="kan")cards.known++;else cards.more.push(t);
+  cards.i++;cards.flip=false;renderCards();
+}
+function renderCardsDone(){
+  const n=cards.deck.length,k=cards.known;
+  app.innerHTML=`
+  <section class="result">
+    <div class="stars" role="img" aria-label="Klart">${ICON.star.replace("<svg",'<svg class="on"')}</div>
+    <p class="big">${k} av ${n} ord</p>
+    <p class="msg">${k===n?"Du kunde alla! Grymt.":"Du har gått igenom alla kort. Öva lite till på de svåra."}</p>
+    <div class="stack-btns">
+      ${cards.more.length?`<button class="btn orange" data-act="cardsmore">Öva på de ${cards.more.length} svåra orden</button>`:""}
+      <button class="btn${cards.more.length?" ghost":""}" data-act="cards:${cards.area}">Alla kort igen</button>
+      <button class="btn ghost" data-act="home">Hem</button>
+    </div>
+  </section>`;
+}
+
+// ---------- ADULTS
+function stackbar(s){const w=k=>s.tot?(s[k]/s.tot*100):0;return `<div class="stackbar" role="img" aria-label="${s.mastered} kan, ${s.learning} övar på, ${s.weak} öva mer, ${s.new} ej testade"><i class="s-mastered" style="width:${w("mastered")}%"></i><i class="s-learning" style="width:${w("learning")}%"></i><i class="s-weak" style="width:${w("weak")}%"></i></div>`}
+function renderAdult(){
+  const tabs=[["dash","Översikt"],["forhor","Förhör"],["plan","Plan"]];
+  let body="";
+  if(state.adultTab==="dash")body=dashHTML();
+  else if(state.adultTab==="forhor")body=`<h2>Lärarens exempelfrågor</h2><p class="small">Läs frågan högt, låt Lev svara med egna ord och visa sedan svaret.</p>
+    <ul class="list">${F.map((f,n)=>`<li>${tag(f[0])}<b>${esc(f[1])}</b><button class="pill" data-act="reveal:${n}" style="align-self:flex-start">Visa svar</button><span class="a" id="r${n}" hidden>${esc(f[2])}</span></li>`).join("")}</ul>`;
+  else{const done=store.get("plan",{}),iso=todayISO();
+    body=`<h2>Plan fram till provet</h2><p class="small">Cirka 20 minuter om dagen. Dagens punkt bockas av automatiskt när Lev gör dagens uppdrag. Ett litet testprov i Digiexam görs i skolan i början av vecka 46.</p>
+    <ul class="list plan">${PLAN.map((p,i)=>{const past=p[1]<iso,now=p[0]<=iso&&iso<=p[1];return `<li class="${past?"past":""} ${now?"now":""}"><input type="checkbox" id="p${i}" ${done[i]?"checked":""}><label for="p${i}" style="display:flex;gap:12px;flex-wrap:wrap;min-width:0"><span class="d">${p[2]}</span><span style="min-width:0"><b>${esc(p[4])}</b><br><span class="small">${esc(p[5])}</span></span></label></li>`}).join("")}</ul>`}
+  app.innerHTML=`
+  <div class="topbar"><button class="back" data-act="home">← Till Lev</button></div>
+  <h1 style="font-size:32px">För vuxna</h1>
+  <div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button class="pill" role="tab" data-act="atab:${k}" aria-pressed="${state.adultTab===k}" aria-selected="${state.adultTab===k}">${l}</button>`).join("")}</div>
+  <section class="panel">${body}</section>
+  <p class="small">Frågorna täcker lärarens PDF ”Inför geografiprov” och bokens sidor 6–27. Sidorna 7, 9 och 16 saknades i den inskannade PDF:en, så de finns inte med. Resultaten sparas bara på den här enheten (i appen på hemskärmen).</p>`;
+  app.querySelectorAll(".plan input").forEach(c=>c.onchange=()=>{const d=store.get("plan",{});d[c.id.slice(1)]=c.checked;store.set("plan",d)});
+}
+function dashHTML(){
+  const S=getStats(),all=summarize(null),H=store.get("hist",[]),rate=pct(all.c,all.a),seen=all.tot-all.new;
+  const marks=store.get("marks",{}),cardsKnown=T.filter(t=>marks[t[1]]==="kan").length,cardsMore=T.filter(t=>marks[t[1]]==="mer").length;
+  const weakList=Q.filter(q=>statusOf(q,S)==="weak").map(q=>({q,s:S[q[1]]})).sort((x,y)=>(x.s.c/x.s.a)-(y.s.c/y.s.a)||y.s.a-x.s.a);
+  return `
+  <h2>Hur går det?</h2>
+  <div class="tiles">
+    <div class="tile"><span class="n" style="color:var(${rate===null?"--muted":rate>=80?"--good":rate>=60?"--warn":"--bad"})">${rate===null?"–":rate+"%"}</span><span>Rätt-andel · ${all.a?`${all.c} rätt av ${all.a} svar`:"inga svar än"}</span></div>
+    <div class="tile"><span class="n">${all.mastered}<small style="font-size:18px;color:var(--muted)"> / ${all.tot}</small></span><span>Kan (rätt två gånger i rad)</span></div>
+    <div class="tile"><span class="n">${seen}<small style="font-size:18px;color:var(--muted)"> / ${all.tot}</small></span><span>Testade minst en gång</span></div>
+    <div class="tile"><span class="n">${H.length}</span><span>Quiz klara</span></div>
+  </div>
+  ${stackbar(all)}
+  <div class="legendkey"><span><i class="s-mastered"></i>Kan ${all.mastered}</span><span><i class="s-learning"></i>Övar på ${all.learning}</span><span><i class="s-weak"></i>Öva mer ${all.weak}</span><span><i class="s-new"></i>Ej testade ${all.new}</span></div>
+  <h2>Per område</h2>
+  <div>${Object.keys(AREAS).map(k=>{const a=AREAS[k],s=summarize(k),r=pct(s.c,s.a);return `<div class="arow">
+    <div style="min-width:0"><b>${a.name}</b><br><span class="small">${a.pages} · rätt-andel ${r===null?"–":r+"%"} · kan ${s.mastered} av ${s.tot}${s.weak?` · <span class="warntxt">${s.weak} att öva mer</span>`:""}</span></div>
+    <button class="pill" data-act="weak:${k}">Öva</button>${stackbar(s)}</div>`}).join("")}</div>
+  <h2>Svåraste frågorna</h2>
+  ${weakList.length===0?`<div class="empty">${all.a?"Inga svaga frågor just nu.":"Här visas frågorna Lev missar, när han har gjort ett quiz."}</div>`
+   :`<ul class="list">${weakList.slice(0,8).map(({q,s})=>`<li>${tag(q[0])}<b>${esc(q[1])}</b><span class="a">${esc(q[2])}</span><span class="small">${q[5]==="PDF"?"Lärarens lapp":"Boken "+q[5]} · rätt ${s.c} av ${s.a} ${s.a===1?"gång":"gånger"}</span></li>`).join("")}</ul>${weakList.length>8?`<p class="small">…och ${weakList.length-8} till.</p>`:""}`}
+  <h2>Senaste quiz</h2>
+  ${H.length===0?`<div class="empty">Ingen historik än.</div>`:`
+  <div class="trend" role="img" aria-label="Resultat för de senaste quizen i procent">${H.slice(-10).map(h=>{const p=Math.round(h.s/h.n*100);return `<div class="col"><b>${p}%</b><i style="height:calc((100% - 22px) * ${p/100})"></i></div>`}).join("")}</div>
+  <div class="xl">${H.slice(-10).map(h=>{const d=new Date(h.t);return `<span>${d.getDate()}/${d.getMonth()+1}<br>${h.s}/${h.n}</span>`}).join("")}</div>`}
+  <h2>Begreppskort</h2>
+  <p class="small">Lev kan ${cardsKnown} av ${T.length} begrepp${cardsMore?` · ${cardsMore} markerade ”Öva mer”`:""}.</p>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">${state.confirmReset
+    ?`<span class="small">Radera alla resultat på den här enheten?</span><button class="pill" data-act="reset-yes">Ja, nollställ</button><button class="pill" data-act="reset-no">Avbryt</button>`
+    :`<button class="pill" data-act="reset">Nollställ framsteg</button>`}</div>`;
+}
+
+// ---------- wiring
+function render(){
+  ({home:renderHome,topic:renderTopic,quiz:renderQuiz,cards:renderCards,adult:renderAdult})[state.screen]();
+}
+function goHome(){state.screen="home";quiz=null;cards=null;render();window.scrollTo(0,0)}
+function act(a){
+  const [cmd,arg]=a.split(":");
+  switch(cmd){
+    case "home":return goHome();
+    case "topic":state.area=arg;state.screen="topic";render();return window.scrollTo(0,0);
+    case "quiz":return startQuiz({area:arg,n:10});
+    case "weak":return startQuiz({area:arg,n:10,mode:"svaga"});
+    case "mix":return startQuiz({area:"alla",n:10});
+    case "mission":{const i=missionIndex(),p=PLAN[i];if(!p)return;
+      if(AREAS[p[3]])return startQuiz({area:p[3],n:10,mission:i});
+      if(p[3]==="alla")return startQuiz({area:"alla",n:20,mission:i});
+      if(p[3]==="svaga")return startQuiz({area:"alla",n:10,mode:"svaga",mission:i});
+      return startQuiz({area:"alla",n:10,mode:"svaga",mission:i})}
+    case "cards":return startCards(arg);
+    case "pick":return pick(+arg);
+    case "next":return nextQ();
+    case "quit":if(state.quitSure)return goHome();state.quitSure=true;return renderQuiz();
+    case "redo":return startQuiz({area:quiz.o.area,list:quiz.wrong.slice()});
+    case "again":{const o={...quiz.o};delete o.list;delete o.mission;return startQuiz(o.area?o:{area:"alla",n:10})}
+    case "flip":return flipCard();
+    case "kan":case "mer":return markCard(cmd);
+    case "prevcard":cards.i=Math.max(0,cards.i-1);cards.flip=false;return renderCards();
+    case "cardsmore":return startCards(cards.area,shuffle(cards.more));
+    case "en":state.en=!state.en;store.set("en",state.en);return render();
+    case "adult":state.screen="adult";state.confirmReset=false;render();return window.scrollTo(0,0);
+    case "atab":state.adultTab=arg;state.confirmReset=false;return render();
+    case "reveal":{const r=document.getElementById("r"+arg),b=app.querySelector(`[data-act="reveal:${arg}"]`);r.hidden=!r.hidden;b.textContent=r.hidden?"Visa svar":"Dölj svar";return}
+    case "reset":state.confirmReset=true;return render();
+    case "reset-no":state.confirmReset=false;return render();
+    case "reset-yes":store.set("stats",{});store.set("hist",[]);store.set("marks",{});store.set("plan",{});state.confirmReset=false;return render();
+  }
+}
+app.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(b)act(b.dataset.act)});
+document.addEventListener("keydown",e=>{
+  if(e.metaKey||e.ctrlKey||e.altKey)return;
+  if(state.screen==="quiz"&&quiz&&quiz.i<quiz.pool.length){
+    const m={"1":0,"2":1,"3":2,"4":3,a:0,b:1,c:2,d:3}[e.key.toLowerCase()];
+    if(m!==undefined&&quiz.picked===null){e.preventDefault();pick(m)}
+  }
+  if(state.screen==="cards"&&cards&&cards.i<cards.deck.length&&e.key===" "&&document.activeElement.tagName!=="BUTTON"){e.preventDefault();flipCard()}
+});
+render();
+if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+</script>
+
+</body>
+</html>
