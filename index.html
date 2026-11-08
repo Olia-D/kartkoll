@@ -563,8 +563,9 @@ const getStats=()=>store.get("stats",{});
 function statusOf(q,S){
   const s=S[q[1]];if(!s)return"new";
   const l=s.h[s.h.length-1];
-  if(l===0||(s.a>=3&&s.c/s.a<0.5))return"weak";
+  // Right twice in a row always counts as known, whatever happened before.
   if(s.h.length>=2&&s.h[s.h.length-2]===1&&l===1)return"mastered";
+  if(l===0||(s.a>=3&&s.c/s.a<0.5))return"weak";
   return"learning";
 }
 function record(q,ok){const S=getStats();const s=S[q[1]]||{a:0,c:0,h:[]};s.a++;if(ok)s.c++;s.h.push(ok?1:0);s.h=s.h.slice(-3);S[q[1]]=s;store.set("stats",S)}
@@ -644,6 +645,7 @@ function renderTopic(){
   </section>
   <div class="stack-btns">
     <button class="btn" data-act="quiz:${k}">Starta quiz · 10 frågor</button>
+    ${(()=>{const r=s.tot-s.mastered;if(!r||r===s.tot)return"";return `<button class="btn green" data-act="rest:${k}">${r===1?"Öva på frågan du har kvar":r<=10?`Öva på de ${r} frågorna du har kvar`:"Öva på frågor du inte kan än · 10 frågor"}</button>`})()}
     <button class="btn ghost" data-act="cards:${k}">Begreppskort · ${nCards} ord</button>
     ${s.weak?`<button class="btn orange" data-act="weak:${k}">Öva på det svåra · ${s.weak} ${s.weak===1?"fråga":"frågor"}</button>`:""}
   </div>`;
@@ -857,6 +859,7 @@ function act(a){
     case "topic":state.area=arg;state.screen="topic";render();return window.scrollTo(0,0);
     case "quiz":return startQuiz({area:arg,n:10});
     case "weak":return startQuiz({area:arg,n:10,mode:"svaga"});
+    case "rest":{const S=getStats(),list=shuffle(Q.filter(q=>q[0]===arg&&statusOf(q,S)!=="mastered")).slice(0,10);if(!list.length)return;return startQuiz({area:arg,list})}
     case "mix":return startQuiz({area:"alla",n:10});
     case "mission":{const i=missionIndex(),p=PLAN[i];if(!p)return;
       if(AREAS[p[3]])return startQuiz({area:p[3],n:10,mission:i});
