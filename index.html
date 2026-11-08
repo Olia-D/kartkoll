@@ -664,7 +664,7 @@ function renderQuiz(){
       if(ans){if(o===q[2]){cls="ok";m="✓"}else if(i===quiz.picked){cls="no";m="✗"}else cls="dim"}
       return `<button class="opt ${cls}" data-act="pick:${i}" ${ans?"disabled":""}><span class="k">${"ABCD"[i]}</span><span class="t">${esc(o)}</span><span class="m" aria-hidden="true">${m}</span></button>`}).join("")}</div>
     ${ans?`<div class="fb ${ok?"good":"bad"}" role="status">
-      <span class="h">${ok?PRAISE[(quiz.i+quiz.score)%PRAISE.length]:"Nästan!"}</span>
+      <span class="h">${ok?PRAISE[(quiz.i+quiz.score)%PRAISE.length]:"Inte riktigt"}</span>
       ${ok?"":`<span>Rätt svar är: <b>${esc(q[2])}</b></span>`}
       <span class="small">Det står i boken ${q[5]==="PDF"?"på lärarens lapp":q[5]}.</span>
     </div>
@@ -690,7 +690,12 @@ function renderResult(){
     const H=store.get("hist",[]);H.push({t:Date.now(),n,s:quiz.score,area:quiz.o.area||"alla"});store.set("hist",H.slice(-30));
     if(quiz.o.mission!=null){const d=store.get("plan",{});d[quiz.o.mission]=true;store.set("plan",d)}
   }
-  const msg=p>=90?"Superbra! Du är redo för provet.":p>=70?"Bra jobbat! Kolla in de du missade, så sitter de snart.":"Bra att du tränar! Varje gång blir du lite bättre.";
+  // Praise the effort and the actual result. Never predict the test or promise anything ("du är redo", "snart").
+  const pickOne=a=>a[Math.floor(Math.random()*a.length)];
+  const msg=quiz.score===n?pickOne(["Alla rätt! Starkt jobbat.","Fullt pott! Snyggt.","Inte ett enda fel. Bra kämpat!"])
+    :p>=80?pickOne(["Starkt resultat!","Snyggt jobbat!","Bra kämpat, det syns!"])
+    :p>=50?pickOne(["Bra jobbat med att träna!","Bra kämpat!","Snyggt att du körde hela vägen!"])
+    :pickOne(["Du gjorde klart hela quizet. Bra kämpat!","Bra jobbat som tränade hela quizet!"]);
   const colors=["--water","--town","--forest","--field","--star"];
   const conf=stars>=2?`<div class="confetti" aria-hidden="true">${Array.from({length:28},(_,i)=>`<i style="left:${Math.random()*100}%;background:var(${colors[i%5]});animation-delay:${(Math.random()*.6).toFixed(2)}s"></i>`).join("")}</div>`:"";
   app.innerHTML=`
@@ -753,7 +758,7 @@ function renderCardsDone(){
   <section class="result">
     <div class="stars" role="img" aria-label="Klart">${ICON.star.replace("<svg",'<svg class="on"')}</div>
     <p class="big">${k} av ${n} ord</p>
-    <p class="msg">${k===n?"Du kunde alla! Grymt.":"Du har gått igenom alla kort. Öva lite till på de svåra."}</p>
+    <p class="msg">${k===n?`Du kunde alla ${n}. Starkt jobbat!`:`Du gick igenom alla ${n} korten och kunde ${k}. Bra jobbat!`}</p>
     <div class="stack-btns">
       ${cards.more.length?`<button class="btn orange" data-act="cardsmore">Öva på de ${cards.more.length} svåra orden</button>`:""}
       <button class="btn${cards.more.length?" ghost":""}" data-act="cards:${cards.area}">Alla kort igen</button>
