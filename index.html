@@ -509,7 +509,7 @@ function mergeRemote(d){
   const rt=d&&typeof d.t==="number"?d.t:0,localNewer=memT>rt;
   const L={};SYNC.forEach(k=>L[k]=mem[k]==null?null:mem[k]);
   const stats={...(R.stats||{})};Object.entries(L.stats||{}).forEach(([q,s])=>{const r=stats[q];if(!r||(s.a||0)>(r.a||0)||((s.a||0)===(r.a||0)&&localNewer))stats[q]=s});
-  const seen=new Set(),hist=[...(R.hist||[]),...(L.hist||[])].filter(h=>h&&!seen.has(h.t)&&seen.add(h.t)).sort((a,b)=>a.t-b.t).slice(-30);
+  const seen=new Set(),hist=[...(R.hist||[]),...(L.hist||[])].filter(h=>h&&!seen.has(h.t)&&seen.add(h.t)).sort((a,b)=>a.t-b.t).slice(-1000);
   const marks=localNewer?{...(R.marks||{}),...(L.marks||{})}:{...(L.marks||{}),...(R.marks||{})};
   const plan={...(R.plan||{})};Object.entries(L.plan||{}).forEach(([i,v])=>{if(v)plan[i]=true});
   const M={stats,hist,marks,plan};
@@ -569,6 +569,7 @@ function statusOf(q,S){
   return"learning";
 }
 function record(q,ok){const S=getStats();const s=S[q[1]]||{a:0,c:0,h:[]};s.a++;if(ok)s.c++;s.h.push(ok?1:0);s.h=s.h.slice(-3);S[q[1]]=s;store.set("stats",S)}
+function cardsKnown(area){const m=store.get("marks",{});return T.filter(t=>(!area||t[0]===area)&&m[t[1]]==="kan").length}
 function summarize(area){
   const S=getStats(),o={tot:0,new:0,weak:0,learning:0,mastered:0,a:0,c:0};
   Q.forEach(q=>{if(area&&q[0]!==area)return;o.tot++;o[statusOf(q,S)]++;const s=S[q[1]];if(s){o.a+=s.a;o.c+=s.c}});
@@ -625,7 +626,7 @@ function renderHome(){
   <div class="extra">
     <button class="row-btn" data-act="mix"><span class="ic">${ICON.mix}</span><span><b>Blanda allt</b><span class="small">10 frågor från alla områden</span></span><span class="go">›</span></button>
     ${weak?`<button class="row-btn hard" data-act="weak:alla"><span class="ic">${ICON.hard}</span><span><b>Öva på det svåra</b><span class="small">${weak} ${weak===1?"fråga":"frågor"} du har missat</span></span><span class="go">›</span></button>`:""}
-    <button class="row-btn" data-act="cards:alla"><span class="ic">${ICON.cards}</span><span><b>Begreppskort</b><span class="small">Lär dig orden, ${T.length} kort</span></span><span class="go">›</span></button>
+    <button class="row-btn" data-act="cards:alla"><span class="ic">${ICON.cards}</span><span><b>Begreppskort</b><span class="small">${cardsKnown(null)?`Du kan ${cardsKnown(null)} av ${T.length} ord`:`Lär dig orden, ${T.length} kort`}</span></span><span class="go">›</span></button>
   </div>
   <div class="foot"><span></span><button class="pill" data-act="adult">För vuxna ›</button></div>
   <p class="small" id="syncnote" role="status">${syncText()}</p>`;
@@ -646,7 +647,7 @@ function renderTopic(){
   <div class="stack-btns">
     <button class="btn" data-act="quiz:${k}">Starta quiz · 10 frågor</button>
     ${(()=>{const r=s.tot-s.mastered;if(!r||r===s.tot)return"";return `<button class="btn green" data-act="rest:${k}">${r===1?"Öva på frågan du har kvar":r<=10?`Öva på de ${r} frågorna du har kvar`:"Öva på frågor du inte kan än · 10 frågor"}</button>`})()}
-    <button class="btn ghost" data-act="cards:${k}">Begreppskort · ${nCards} ord</button>
+    <button class="btn ghost" data-act="cards:${k}">Begreppskort · ${cardsKnown(k)?`du kan ${cardsKnown(k)} av ${nCards} ord`:`${nCards} ord`}</button>
     ${s.weak?`<button class="btn orange" data-act="weak:${k}">Öva på det svåra · ${s.weak} ${s.weak===1?"fråga":"frågor"}</button>`:""}
   </div>`;
 }
@@ -660,6 +661,9 @@ function startQuiz(o){
   if(o.mode==="svaga"){
     const by={weak:[],learning:[],new:[],mastered:[]};base.forEach(q=>by[statusOf(q,S)].push(q));
     pool=[...shuffle(by.weak),...shuffle(by.learning),...shuffle(by.new),...shuffle(by.mastered)];
+  }else if(o.mode==="fokus"){
+    const todo=[],known=[];base.forEach(q=>(statusOf(q,S)==="mastered"?known:todo).push(q));
+    pool=[...shuffle(todo),...shuffle(known)];
   }else pool=shuffle(base);
   pool=shuffle(pool.slice(0,o.n||pool.length));
   quiz={o,pool:pool.map(q=>({q,opts:shuffle([q[2],...q[3]])})),i:0,score:0,streak:0,best:0,wrong:[],picked:null,saved:false};
@@ -706,7 +710,7 @@ function renderResult(){
   const stars=p>=90?3:p>=70?2:1;
   if(!quiz.saved){
     quiz.saved=true;
-    const H=store.get("hist",[]);H.push({t:Date.now(),n,s:quiz.score,area:quiz.o.area||"alla"});store.set("hist",H.slice(-30));
+    const H=store.get("hist",[]);H.push({t:Date.now(),n,s:quiz.score,area:quiz.o.area||"alla"});store.set("hist",H.slice(-1000));
     if(quiz.o.mission!=null){const d=store.get("plan",{});d[quiz.o.mission]=true;store.set("plan",d)}
   }
   // Praise the effort and the actual result. Never predict the test or promise anything ("du är redo", "snart").
@@ -857,13 +861,13 @@ function act(a){
   switch(cmd){
     case "home":return goHome();
     case "topic":state.area=arg;state.screen="topic";render();return window.scrollTo(0,0);
-    case "quiz":return startQuiz({area:arg,n:10});
+    case "quiz":return startQuiz({area:arg,n:10,mode:"fokus"});
     case "weak":return startQuiz({area:arg,n:10,mode:"svaga"});
     case "rest":{const S=getStats(),list=shuffle(Q.filter(q=>q[0]===arg&&statusOf(q,S)!=="mastered")).slice(0,10);if(!list.length)return;return startQuiz({area:arg,list})}
-    case "mix":return startQuiz({area:"alla",n:10});
+    case "mix":return startQuiz({area:"alla",n:10,mode:"fokus"});
     case "mission":{const i=missionIndex(),p=PLAN[i];if(!p)return;
-      if(AREAS[p[3]])return startQuiz({area:p[3],n:10,mission:i});
-      if(p[3]==="alla")return startQuiz({area:"alla",n:20,mission:i});
+      if(AREAS[p[3]])return startQuiz({area:p[3],n:10,mode:"fokus",mission:i});
+      if(p[3]==="alla")return startQuiz({area:"alla",n:20,mode:"fokus",mission:i});
       if(p[3]==="svaga")return startQuiz({area:"alla",n:10,mode:"svaga",mission:i});
       return startQuiz({area:"alla",n:10,mode:"svaga",mission:i})}
     case "cards":return startCards(arg);
