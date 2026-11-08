@@ -565,10 +565,14 @@ function statusOf(q,S){
   const l=s.h[s.h.length-1];
   // Right twice in a row always counts as known, whatever happened before.
   if(s.h.length>=2&&s.h[s.h.length-2]===1&&l===1)return"mastered";
+  // A question he has known before, then missed: one right answer gives the point back.
+  if(l===1&&everKnown(s))return"mastered";
   if(l===0||(s.a>=3&&s.c/s.a<0.5))return"weak";
   return"learning";
 }
-function record(q,ok){const S=getStats();const s=S[q[1]]||{a:0,c:0,h:[]};s.a++;if(ok)s.c++;s.h.push(ok?1:0);s.h=s.h.slice(-3);S[q[1]]=s;store.set("stats",S)}
+// "m" remembers that a question has been known (right twice in a row) at some point.
+function everKnown(s){if(s.m)return true;for(let i=1;i<s.h.length;i++)if(s.h[i-1]===1&&s.h[i]===1)return true;return false}
+function record(q,ok){const S=getStats();const s=S[q[1]]||{a:0,c:0,h:[]};const knew=everKnown(s);s.a++;if(ok)s.c++;s.h.push(ok?1:0);s.h=s.h.slice(-3);if(knew||everKnown(s))s.m=1;S[q[1]]=s;store.set("stats",S)}
 function cardsKnown(area){const m=store.get("marks",{});return T.filter(t=>(!area||t[0]===area)&&m[t[1]]==="kan").length}
 function summarize(area){
   const S=getStats(),o={tot:0,new:0,weak:0,learning:0,mastered:0,a:0,c:0};
