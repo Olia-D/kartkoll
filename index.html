@@ -206,6 +206,12 @@ p{margin:0}
 .xl span{flex:1;min-width:0;text-align:center;font-size:12px;color:var(--muted)}
 .empty{border:2px dashed var(--line);border-radius:12px;padding:16px;color:var(--muted)}
 .warntxt{color:var(--warn);font-weight:700}
+.tabnote{border:2px solid var(--warn);background:var(--warn-bg);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.tabnote b{font:800 19px/1.2 var(--display)}
+.steps{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:6px}
+.here{font-weight:700;background:var(--paper);border-radius:12px;padding:10px 14px}
+#xcode{width:100%;font:16px/1.4 var(--body);padding:10px 12px;border-radius:12px;border:2px solid var(--line);background:var(--paper);color:var(--ink);resize:vertical;min-width:0}
+.xmsg{font-weight:700;color:var(--good);min-height:1.5em}
 @media (max-width:380px){.topics{grid-template-columns:1fr}.two{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}.confetti{display:none}}
 </style>
@@ -512,6 +518,16 @@ function mergeRemote(d){
   memT=same?Math.max(rt,memT):Math.max(Date.now(),rt+1);local.set("t",memT);
   return !same;
 }
+// On iPad, Safari and the Home Screen app keep separate storage. Detect Safari (not the installed app)
+// and let progress be moved between them with a copy/paste code.
+const IN_SAFARI_TAB=("standalone" in navigator)&&!navigator.standalone;
+const WHERE=IN_SAFARI_TAB?"Safari":navigator.standalone?"appen på hemskärmen":"webbläsaren";
+function exportCode(){return "KARTKOLL1:"+btoa(unescape(encodeURIComponent(JSON.stringify(payload()))))}
+function importCode(raw){
+  try{const m=String(raw).replace(/\s+/g,"").match(/KARTKOLL1:([A-Za-z0-9+/=]+)/);if(!m)return null;
+    const d=JSON.parse(decodeURIComponent(escape(atob(m[1]))));
+    return d&&typeof d.t==="number"&&"stats" in d?d:null}catch(e){return null}
+}
 function setStatus(s){cloud.status=s;const el=document.getElementById("syncnote");if(el)el.innerHTML=syncText()}
 function syncText(){return {cloud:"Sparas på webben",local:"Allt sparas på den här enheten",connecting:"Ansluter…",readonly:"Kan inte spara på webben med det här kontot",error:"Kunde inte spara på webben just nu"}[cloud.status]}
 async function connectCloud(){
@@ -587,6 +603,7 @@ function renderHome(){
     </section>`;
   }
   app.innerHTML=`
+  ${IN_SAFARI_TAB?`<section class="tabnote" role="note"><b>Du har öppnat Kartkoll i Safari.</b><span>Det du gör här sparas inte i Kartkoll-appen på hemskärmen. Öppna appen från ikonen i stället.</span><span class="small">Har du redan övat här? En vuxen kan flytta framstegen under ”För vuxna” → ”Flytta framsteg”.</span></section>`:""}
   <header class="hello">
     <div><p class="eyebrow">Kartkoll · provet ons 11 nov</p><h1>Hej Lev!</h1></div>
   </header>
@@ -770,9 +787,19 @@ function renderCardsDone(){
 // ---------- ADULTS
 function stackbar(s){const w=k=>s.tot?(s[k]/s.tot*100):0;return `<div class="stackbar" role="img" aria-label="${s.mastered} kan, ${s.learning} övar på, ${s.weak} öva mer, ${s.new} ej testade"><i class="s-mastered" style="width:${w("mastered")}%"></i><i class="s-learning" style="width:${w("learning")}%"></i><i class="s-weak" style="width:${w("weak")}%"></i></div>`}
 function renderAdult(){
-  const tabs=[["dash","Översikt"],["forhor","Förhör"],["plan","Plan"]];
+  const tabs=[["dash","Översikt"],["forhor","Förhör"],["plan","Plan"],["flytta","Flytta framsteg"]];
   let body="";
   if(state.adultTab==="dash")body=dashHTML();
+  else if(state.adultTab==="flytta"){const a=summarize(null),h=store.get("hist",[]);
+    body=`<h2>Flytta framsteg</h2>
+    <p class="small">På en iPad sparar Kartkoll i Safari och Kartkoll från hemskärmen framstegen var för sig. Så här flyttar du dem dit Lev brukar öva:</p>
+    <ol class="steps"><li>Öppna Kartkoll där framstegen finns (till exempel i Safari), gå hit och tryck <b>Kopiera framsteg</b>.</li><li>Öppna Kartkoll från hemskärmen, gå hit igen och klistra in i rutan.</li><li>Tryck <b>Lägg till framstegen</b>. Inget försvinner: det bästa från båda slås ihop.</li></ol>
+    <p class="here">Här (${WHERE}): kan ${a.mastered} av ${a.tot} frågor · ${h.length} quiz</p>
+    <button class="btn" data-act="xcopy">Kopiera framsteg</button>
+    <label for="xcode" class="small">Kod från den andra platsen</label>
+    <textarea id="xcode" rows="4" placeholder="Klistra in koden här" autocapitalize="off" autocomplete="off" spellcheck="false"></textarea>
+    <button class="btn ghost" data-act="xpaste">Lägg till framstegen</button>
+    <p id="xmsg" class="xmsg" role="status">${state.xmsg||""}</p>`;state.xmsg=""}
   else if(state.adultTab==="forhor")body=`<h2>Lärarens exempelfrågor</h2><p class="small">Läs frågan högt, låt Lev svara med egna ord och visa sedan svaret.</p>
     <ul class="list">${F.map((f,n)=>`<li>${tag(f[0])}<b>${esc(f[1])}</b><button class="pill" data-act="reveal:${n}" style="align-self:flex-start">Visa svar</button><span class="a" id="r${n}" hidden>${esc(f[2])}</span></li>`).join("")}</ul>`;
   else{const done=store.get("plan",{}),iso=todayISO();
@@ -849,6 +876,13 @@ function act(a){
     case "adult":state.screen="adult";state.confirmReset=false;render();return window.scrollTo(0,0);
     case "atab":state.adultTab=arg;state.confirmReset=false;return render();
     case "reveal":{const r=document.getElementById("r"+arg),b=app.querySelector(`[data-act="reveal:${arg}"]`);r.hidden=!r.hidden;b.textContent=r.hidden?"Visa svar":"Dölj svar";return}
+    case "xcopy":{const code=exportCode(),ta=document.getElementById("xcode"),msg=document.getElementById("xmsg");
+      const fallback=()=>{ta.value=code;ta.focus();ta.select();msg.textContent="Koden står i rutan. Markera den och välj Kopiera."};
+      try{navigator.clipboard.writeText(code).then(()=>{msg.textContent="Kopierat! Öppna Kartkoll på den andra platsen och klistra in där."},fallback)}catch(e){fallback()}
+      return}
+    case "xpaste":{const raw=document.getElementById("xcode").value,d=importCode(raw);
+      if(!d){document.getElementById("xmsg").textContent="Koden känns inte igen. Kopiera den igen och klistra in hela koden.";return}
+      mergeRemote(d);const a=summarize(null);state.xmsg=`Klart! Framstegen är tillagda. Nu: kan ${a.mastered} av ${a.tot} frågor.`;return render()}
     case "reset":state.confirmReset=true;return render();
     case "reset-no":state.confirmReset=false;return render();
     case "reset-yes":store.set("stats",{});store.set("hist",[]);store.set("marks",{});store.set("plan",{});state.confirmReset=false;return render();
